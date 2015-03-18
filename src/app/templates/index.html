@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% load bootstrap_themes %}
+{% load markup %}
+{% load bootswatch %}
+
+{% block head %}
+    {% bootstrap_styles theme=theme type='min.css' %}
+{% endblock %}
+
+{% block body %}
+    {% navbar container=True %}
+        {% brand %} django-era
+        {% collapse %} {% bootswatch-menu class='navbar-nav navbar-right' %}
+    {% end-navbar %}
+
+    {% container %}
+        {% panel %}
+            {% title %} Demo
+            {% body %} {% icon spinner spin=True %}
+        {% end-panel %}
+    {% end-container %}
+{% endblock %}
