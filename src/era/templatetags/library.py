@@ -1,91 +1,209 @@
+from importlib import import_module
+from itertools import chain
 import re
-from classytags.arguments import Argument, KeywordArgument, MultiKeywordArgument
-from classytags.core import Options as BaseOptions
-from classytags.core import Tag as BaseTag 
-from django.template import Library
-from ..utils.functools import omit, first
+
+from classytags.arguments import MultiKeywordArgument
+from classytags.core import Options
+from classytags.core import Tag as ClassyTag
+from django.template import Library, TemplateSyntaxError
+
+
+from ..utils.functools import unpack_args, reduce_dict, truthful, emptyless, pick, omit
 from ..utils.translation import normalize
 
 
 register = Library()
-register.ctag = lambda cls: register.tag(normalize(cls.__name__), cls)
+register.era = lambda cls: register.tag(normalize(cls.__name__), cls)
 
 
-class Prop(Argument):
-    def __init__(self, name, default=None, **kwargs):
-        kwargs = dict({'resolve': False}, **kwargs)
-        if default is not None:
-            kwargs['required'] = False
-        super().__init__(name, default, **kwargs)
+@register.era
+class Import(ClassyTag):
+    def __init__(self, parser, tokens):
+        for module in tokens.contents.split(' ')[1:]:
+            path = '.'.join(chain(
+                [module.split('.')[0]],
+                ['components'],
+                [] if not '.' in module else module.split('.')[1:]))
+            try:
+                parser.tags.update(import_module(path).register.tags)
+            except ImportError:
+                raise TemplateSyntaxError('can not import {0}'.format(path))
 
 
-class Tweaks(MultiKeywordArgument):
-    def __init__(self, name='tweaks', **kwargs):
-        kwargs = dict({'required': False}, **kwargs)
-        return super().__init__(name, **kwargs)
+class HTMLTag:
+    def __init__(self, el):
+        self.el = str(el)
 
+    def __str__(self):
+        return self.el
 
-class Options:
-    def __init__(self, *args, **kwargs):
-        if kwargs.get('blocks', []):
-            self.blocks = [(kwargs['blocks'][0], 'nodelist')]
-            self.blocks += list(map(
-                lambda b: (b[1], kwargs['blocks'][b[0] - 1]),
-                enumerate(kwargs['blocks'][1:], start=1)))
+    def modify_tag(self, diff):
+        tag, *rest = self.el.split('>')
+        self.el = '>'.join([diff(tag)] + rest)
+
+    def modify_content(self, content, fmt):
+        self.el = re.sub(r'>(.*)<', fmt.format(content), self.el)
+
+    def append(self, content):
+        self.modify_content(content, r'>\g<1>{0}<')
+
+    def prepend(self, content):
+        self.modify_content(content, r'>{0}\g<1><')
+
+    def add_attr(self, name, val=None):
+        self.modify_tag(lambda tag: ' '.join([
+            tag.endswith('/') and tag.rstrip('/') or tag,
+            val is None and name or '{0}="{1}"'.format(name, val),
+            tag.endswith('/') and '/' or '']))
+
+    def add_class(self, *cls):
+        if not any(cls):
+            return
+        if not self.has_attr('class'):
+            self.add_attr('class', ' '.join(cls))
         else:
-            self.blocks = []
-        self.args = list(args) + [KeywordArgument('class', required=False)]
-        self.kwargs = kwargs
+            self.modify_tag(
+                lambda tag: re.sub(
+                    r'class="([^"]*)"',
+                    r'class="\g<1> {0}"'.format(' '.join(cls)),
+                    tag))
+
+    def has_attr(self, name):
+        return name in self.el.split('>')[0]
+
+    def empty(self):
+        self.el = ''
 
 
-class Tag(BaseTag):
-    def inject(self, cls, **kw):
-        return cls().render_tag(self.context, **kw)
+class Props(dict):
+    def __getattr__(self, name):
+        if name in self:
+            return self.get(name)
+        raise AttributeError('Missing prop: ' + name)
 
+
+class Component(ClassyTag):
     def __init__(self, parser=None, tokens=None):
         self.blocks = {}
-        self.options = self.get_options()
-        parser and super().__init__(parser, tokens)           
+        self.set_options()
+        parser and super().__init__(parser, tokens)
 
-    def get_options(self, **kw):
-        return BaseOptions(*self.options.args, **dict(self.options.kwargs, **kw))
+    @classmethod
+    def as_string(cls, request=None, **kw):
+        return cls().render_tag({'request': request}, **kw)
 
-    def render_tag(self, context, **kw):
+    def inject(self, cls, props=None, nodelist=None):
+        return '' if not cls else cls().render_tag(self.context, **dict(
+            props or {}, **(nodelist and {'nodelist': nodelist} or {})))
+
+    def join(self, *components):
+        return ''.join(map(lambda x: self.inject(x), components))
+
+    def get_defaults(self):
+        return {}
+
+    def get_class_set(self, *args, prefix='', include=''):
+        return ' '.join(emptyless(
+            chain([include], map(
+                lambda k: '-'.join(emptyless([prefix, k])),
+                truthful(pick(self.props, *args)).keys()))))
+
+    def resolve_props(self):
+        return {}
+
+    def set_options(self, **kw):
+        self.options = Options(MultiKeywordArgument('mka', required=False), **kw)
+
+    def set_props(self, **kw):
+        self.props = Props(
+            self.get_defaults(),
+            **dict(kw, **dict(reduce_dict(
+                lambda k, v: (k, v.render(self.context)),
+                self.blocks))))
+        self.props.update(self.resolve_props())
+
+    def render_tag(self, context, mka=None, **kw):
         self.context = context
         self.request = context['request']
+        self.set_props(**dict(mka or {}, **kw))
+        return self.render_dom()
 
-        try:
-            kw['class'] = kw.get(
-                first(
-                    lambda p: isinstance(p, Tweaks),
-                    self.options.options[None]
-                ).name).pop('class', None)
-        except IndexError:
-            pass
-
-        self.props = dict(
-            omit(kw, 'class'),
-            **{k: v.render(context) for k, v in self.blocks.items()})
-
-        result = self.DOM()
-        if kw.get('class', None):
-            el = result.split('>')[0]
-            return '>'.join([
-                not 'class' in el and (el + 'class="{0}"'.format(kw['class'])) \
-                or re.sub(r'class="(.*)"', r'class="\g<1> {0}"'.format(kw['class']), el)] \
-                + result.split('>')[1:])
-        return result
-
-    def fmt(self, string):
-        return string.format(**self.props)
+    def render_dom(self):
+        self.dom = HTMLTag(self.DOM())
+        self.tweak()
+        return str(self.dom)
 
     def DOM(self):
         raise NotImplementedError
 
+    def tweak(self):
+        if 'class' in self.props:
+            self.dom.add_class(self.props['class'])
 
-class BlockTag(Tag):
-    def get_options(self):
-        end_block = (
-            'end-' + normalize(self.__class__.__name__),
-            not self.options.blocks and 'nodelist' or self.options.kwargs['blocks'][-1])
-        return super().get_options(blocks=list(self.options.blocks) + [end_block])
+
+@register.era
+class Inject(Component):
+    def DOM(self):
+        return '' if not self.props.component else self.inject(
+            lambda: self.props.component,
+            omit(self.props, 'component'))
+
+
+class ComplexComponent(Component):
+    parts = []
+
+    def get_defaults(self):
+        return {'nodelist': ''}
+
+    def set_options(self, **kw):
+        return super().set_options(**(kw or {'blocks': chain(
+            [] if not self.parts else [(self.parts[0], 'nodelist')],
+            [] if not self.parts else list(map(unpack_args(
+                lambda i, b: (b, self.parts[i - 1])),
+                enumerate(self.parts[1:], start=1))),
+            [(
+                'end-' + normalize(self.__class__.__name__),
+                not self.parts and 'nodelist' or self.parts[-1])])}))
+
+
+@register.era
+class Tag(ComplexComponent):
+    el = 'div'
+    nobody = False
+
+    def get_nodelist(self):
+        return self.props.nodelist
+
+    def resolve_attrs(self):
+        return {}
+
+    def resolve_prop(self, name):
+        return self.props.get(name, getattr(self, name))
+
+    def resolve_props(self):
+        attrs = dict(
+            self.props.pop('attrs', {}),
+            **self.resolve_attrs())
+        if 'id' in self.props:
+            attrs['id'] = self.props.pop('id')
+        if 'class' in self.props:
+            attrs['class'] = ' '.join(emptyless([
+                attrs.get('class', ''), self.props.pop('class')]))
+        return {
+            'el': self.resolve_prop('el'),
+            'attrs': ' '.join(reduce_dict(
+                lambda k, v: v and '{0}="{1}"'.format(k, v) or k,
+                attrs))}
+
+    def set_options(self):
+        return super().set_options(**(self.nobody and {'blocks': []} or {}))
+    
+    def set_props(self, **kw):
+        super().set_props(**kw)
+        not self.nobody and self.props.update({'nodelist': self.get_nodelist()})
+
+    def DOM(self):
+        return ''.join([
+            '<{el} {attrs}',
+            '/>' if self.resolve_prop('nobody') else '>{nodelist}</{el}>']) \
+        .format(**self.props)
