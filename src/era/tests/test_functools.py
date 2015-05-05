@@ -1,4 +1,4 @@
-from ..utils.functools import unidec, avg, pick, omit, truthful, pluck
+from ..utils.functools import unidec, avg, pick, omit, truthful, pluck, separate
 from .base import SimpleTestCase, IsOkTestCase
 
 
@@ -19,6 +19,13 @@ class AvgTestCase(SimpleTestCase):
         self.assertEqual(avg(4, 6, 8), 6)
 
 
+class SeparateTestCase(SimpleTestCase):
+    def test(self):
+        [even, odd] = separate(lambda x: bool(x % 2), [1, 2, 3, 4, 5])
+        self.assertEqual(even, [2, 4])
+        self.assertEqual(odd, [1, 3, 5])
+
+
 class DictCopyTestCase(SimpleTestCase):
     def test_pick(self):
         self.assertEqual(
@@ -30,7 +37,7 @@ class DictCopyTestCase(SimpleTestCase):
 
     def test_truthful(self):
         self.assertEqual(
-            truthful({1: True, 2: False}), {1: True})
+            truthful({1: True, 2: False, 3: 'yes', 4: []}), {1: True, 3: 'yes'})
 
 
 class PluckTestCase(SimpleTestCase):
