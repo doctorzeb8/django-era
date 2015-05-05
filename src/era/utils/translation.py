@@ -1,12 +1,16 @@
 import re
+from django.utils.text import capfirst
 from django.utils.translation import ugettext_lazy
-from .functools import unidec, pluck
+from .functools import call, unidec, pluck
 
 
 def normalize(string):
     return ''.join(map(
         lambda e: e[0] and re.sub(r'([A-Z])', r'-\g<1>', e[1]) or e[1],
         enumerate(string))).lower()
+
+def capitalize(string):
+    return ''.join(map(capfirst, string.split('-')))
 
 def _(string):
     t = ugettext_lazy(string)
@@ -19,17 +23,5 @@ def verbose_choice(obj, f):
 def verbose_choices(*args):
     return map(lambda a: (a.message, a), args)
 
-
-@unidec
-def verbose_serialize(fn, *args):
-    obj = args and args[0]
-    result = fn(*args) or {}
-    return map(
-        lambda f: (
-            obj._meta.get_field(f).verbose_name,
-            getattr(obj, 'get_{0}_display'.format(f), lambda: getattr(obj, f))()),
-        result.get(
-            'fields',
-            filter(
-                lambda f: not f in result.get('exclude', []),
-                pluck(obj._meta.fields, 'name'))))
+def verbose_attr(obj, field):
+    return (obj._meta.get_field(field).verbose_name, getattr(obj, field))
