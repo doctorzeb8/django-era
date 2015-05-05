@@ -1,4 +1,3 @@
-from .utils.functools import avg, random_str, unidec
-from .utils.shortcuts import short_url
+from .utils.functools import just, avg, unidec, emptyless, random_str
 from .utils.translation import _
-from .views import view
+from .utils.urls import view_url, package_patterns

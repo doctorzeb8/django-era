@@ -17,20 +17,20 @@ INSTALLED_APPS = [
     'era'
 ]
 
-BOWER_INSTALLED_APPS = (
+BOWER_INSTALLED_APPS = [
     'moment',
     'jquery#2',
     'underscore',
     'bootstrap',
     'seiyria-bootstrap-slider',
     'fontawesome'
-)
+]
 
 MODULES = [
     'app'
 ]
 
-MIDDLEWARE_CLASSES = (
+MIDDLEWARE_CLASSES = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -39,28 +39,30 @@ MIDDLEWARE_CLASSES = (
     'django.middleware.locale.LocaleMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-)
+]
 
-TEMPLATE_LOADERS = (
+TEMPLATE_LOADERS = [
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader'
-)
+]
 
-TEMPLATE_CONTEXT_PROCESSORS = (
+TEMPLATE_CONTEXT_PROCESSORS = [
     'django.contrib.auth.context_processors.auth',
     'django.core.context_processors.request',
     'django.contrib.messages.context_processors.messages'
-)
+]
 
-STATICFILES_FINDERS = (
+STATICFILES_FINDERS = [
     'django.contrib.staticfiles.finders.FileSystemFinder',
     'django.contrib.staticfiles.finders.AppDirectoriesFinder',
     'djangobower.finders.BowerFinder'
-)
+]
 
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 ROOT_URLCONF = 'era.urls'
 WSGI_APPLICATION = 'app.wsgi.application'
+INDEX_VIEW = 'app.views.IndexView'
+TEMPLATE_VIEW_MIXINS = []
 
 TIME_ZONE = 'UTC'
 USE_TZ = True
