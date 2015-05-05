@@ -1,7 +1,7 @@
 {% extends 'base.html' %}
 {% load bootstrap_themes %}
 {% load markup %}
-{% load bootswatch %}
+{% import app %}
 
 {% block head %}
     {% bootstrap_styles theme=theme type='min.css' %}
@@ -16,7 +16,7 @@
     {% container %}
         {% panel %}
             {% title %} Demo
-            {% body %} {% icon spinner spin=True %}
+            {% body %} {% icon name='spinner' spin=True %}
         {% end-panel %}
     {% end-container %}
 {% endblock %}

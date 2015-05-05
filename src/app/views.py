@@ -1,7 +1,7 @@
 from django.shortcuts import redirect
-from era import view
+from era.views import TemplateView
 
 
-@view
-def index(request, theme='spacelab'):
-    return {'theme': theme}
+class Index(TemplateView):
+    def get(self, request, theme='spacelab'):
+        return self.render_to_response({'theme': theme})
