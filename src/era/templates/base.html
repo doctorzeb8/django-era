@@ -6,8 +6,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
-    <title>{% block title %}{% endblock %}</title>
-    {% favicon url='images/favicon.png' %}
+    <title>{% block title %}{{ page_title|capfirst }}{% endblock %}</title>
+    {% favicon url='favicon.png' %}
     {% stylesheet url='fontawesome/css/font-awesome.min.css' %}
     {% script url='moment/min/moment.min.js' %}
     {% script url='jquery/dist/jquery.min.js' %}
@@ -15,7 +15,7 @@
     {% script url='bootstrap/dist/js/bootstrap.min.js' %}
     <script>var django = {jQuery: $}</script>
 
-    {% forms-media %}
+    {% media %}
     {% block head %}
         {% stylesheet src='bootstrap/dist/css/bootstrap.min.css' %}
     {% endblock %}

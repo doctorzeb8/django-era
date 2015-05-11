@@ -2,7 +2,7 @@ from itertools import chain
 from django.core.urlresolvers import reverse
 from django.utils.text import capfirst
 
-from ..utils.functools import just, emptyless, reduce_dict, omit, pick
+from ..utils.functools import just, call, emptyless, reduce_dict, omit, pick, truthful
 from .library import register, Import, Component, ComplexComponent, Tag
 
 
@@ -18,8 +18,8 @@ class Icon(Component):
                     filter(
                         lambda z: z[1] in self.props,
                         zip(
-                            ('li', 'lg', 'fw', 'spin', 'rotate-{0}'),
-                            ('list', 'large', 'fixed', 'spin', 'rotate'))))))})
+                            ('{0}x', 'li', 'lg', 'fw', 'spin', 'rotate-{0}'),
+                            ('size', 'list', 'large', 'fixed', 'spin', 'rotate'))))))})
 
 
 class IconicList(Component):
@@ -110,7 +110,22 @@ class Link(Tag):
     el = 'a'
 
     def get_defaults(self):
-        return {'url': 'index', 'args': [], 'kwargs': {}, 'reverse': True, 'newtab': False}
+        return {
+            'newtab': False,
+            'reverse': True,
+            'url': 'index',
+            'args': [],
+            'kwargs': {},
+            'rel': None}
+
+    def resolve_props(self):
+        if self.props.rel:
+            return {
+                'reverse': False,
+                'url': '/'.join([
+                    self.request.path.rstrip('/'),
+                    self.props.rel])}
+        return {}
 
     def resolve_attrs(self):
         return {
@@ -127,7 +142,9 @@ class Button(Tag):
         return {'level': 'primary', 'type': 'button', 'name': 'button'}
 
     def resolve_attrs(self):
-        return {'type': self.props.type, 'class': 'btn btn-' + self.props.level}
+        return dict(
+            {'class': 'btn btn-' + self.props.level},
+            **pick(self.props, 'type', 'onclick'))
 
 
 @register.era
@@ -184,14 +201,14 @@ class Panel(ComplexComponent):
     parts = ['title', 'body']
 
     def get_defaults(self):
-        return {'level': 'primary'}
+        return {'level': 'default', 'title': False}
 
     def DOM(self):
         return self.inject(
             Tag,
             {'class': 'panel panel-' + self.props.level},
             ''.join([
-                self.inject(
+                '' if not self.props.title else self.inject(
                     Tag, {'class': 'panel-heading'}, self.inject(
                         Tag, {'name': 'h3'}, self.props.title)),
                 self.inject(
@@ -235,24 +252,64 @@ class Navbar(ComplexComponent):
                 Container, {'fluid': self.props.container == 'fluid'}, nodelist))
 
 
-@register.era
-class Messages(Component):
+class Table(Component):
+    def slice(self, seq):
+        return list(seq)[slice(*call(
+            getattr(self, 'get_slice', lambda: (None, None))))]
+
+    def get_thead_items(self):
+        return self.props.get('thead', [])
+
+    def get_tbody_items(self):
+        return self.props.get('tbody', [])
+
     def get_defaults(self):
         return {
-            'dismiss': True,
-            'levels': {
-                10: 'primary',
-                20: 'info',
-                25: 'success',
-                30: 'warning',
-                40: 'danger'}}
+            'striped': False,
+            'bordered': False,
+            'hover': True,
+            'condensed': True,
+            'responsive': True}
+
+    def render_content(self, content):
+        if isinstance(content, bool):
+            return self.inject(
+                Icon,
+                {'name': (content and 'check' or 'minus') + '-circle'})
+        return content
+
+    def render_items(self, items, cell='td'):
+        return ''.join(map(
+            lambda row: self.inject(
+                Tag,
+                truthful({'el': 'tr', 'class': row.get('level')}),
+                ''.join(map(
+                    lambda c: self.inject(
+                        Tag,
+                        {'el': cell},
+                        self.render_content(c)),
+                    self.slice(row['items'])))),
+            items))
 
     def DOM(self):
         return self.inject(
-            Tag, {'class': 'messages'}, ''.join(map(
-                lambda message: self.inject(
-                    Alert, {
-                        'level': self.props.levels.get(message.level),
-                        'dismiss': self.props.dismiss},
-                    message.message),
-                self.context['messages'])))
+            Tag,
+            {'el': 'table', 'class': self.get_class_set(
+                'striped',
+                'bordered',
+                'hover',
+                'condensed',
+                'responsive',
+                prefix='table',
+                include='table')},
+            ''.join([
+                    self.inject(
+                        Tag,
+                        {'el': 'thead'},
+                        self.render_items(
+                            [{'items': self.get_thead_items()}],
+                            cell='th')),
+                    self.inject(
+                        Tag,
+                        {'el': 'tbody'},
+                        self.render_items(self.get_tbody_items()))]))

@@ -23,8 +23,7 @@ class MenuItem(Tag):
 
     def resolve_props(self):
         if self.props.divider:
-            return super().resolve_props()
-
+            return {}
         result = {'caption': self.inject(Caption, self.props.caption)}
         if not 'active' in self.props:
             if self.props.url and self.props.reverse:
@@ -35,7 +34,7 @@ class MenuItem(Tag):
             result['include'] = result.get('active', self.props.active)
         if self.props.disabled:
             result.update({'url': '#', 'reverse': False})
-        return dict(super().resolve_props(), **result)
+        return result
 
     def tweak(self):
         if not self.props.include:

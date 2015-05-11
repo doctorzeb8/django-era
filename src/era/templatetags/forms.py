@@ -3,10 +3,9 @@ from django.forms import widgets
 from django.forms.widgets import TextInput, Textarea, CheckboxInput
 from django.template.defaulttags import CsrfTokenNode
 
-from ..utils.functools import call, emptyless, pick, unpack_args, separate
+from ..utils.functools import call, emptyless, truthful, pick, omit, unpack_args, separate
 from .library import register, Component, Tag
-from .markup import Row, Column
-from .tables import Table
+from .markup import Row, Column, Table, Link, Button, Caption
 
 
 class WidgetCaseMixin:
@@ -71,8 +70,7 @@ class Group(Tag):
     def resolve_attrs(self):
         return {'class': ' '.join(emptyless([
             'form-group',
-            {True: 'has-success', False: 'has-error', None: ''}.get(self.is_valid),
-            self.props.get('class', '')]))}
+            {True: 'has-success', False: 'has-error', None: ''}.get(self.is_valid)]))}
 
 
 class Field(WidgetCaseMixin, Group):
@@ -117,8 +115,7 @@ class Field(WidgetCaseMixin, Group):
 
 
 class Formset(Table):
-    @property
-    def hslice(self):
+    def get_slice(self):
         have_instances = any([f.instance.pk for f in self.props.formset.forms])
         return (0, -1 if self.props.formset.can_delete and not have_instances else None)
 
@@ -137,30 +134,63 @@ class Formset(Table):
                         'set_required': False})])),
             enumerate(fields))
 
-    def get_head_items(self):
+    def get_thead_items(self):
         return emptyless(map(
             lambda f: not f.is_hidden and f.label,
             self.props.formset.forms[0]))
 
-    def get_body_items(self):
+    def get_tbody_items(self):
         return map(
             lambda form: {'items': self.get_form_fields(form)},
             self.props.formset.forms)
 
 
+class Action(Component):
+    def get_button_props(self):
+        if not pick(self.props, 'link', 'onclick'):
+            return dict({'type': 'submit'}, **pick(self.props, 'level'))
+        return pick(self.props, 'level', 'onclick')
+
+    def get_link_props(self):
+        if isinstance(self.props.link, str):
+            return {'url': self.props.link}
+        return self.props.link
+
+    def DOM(self):
+        result = self.inject(
+            Button, self.get_button_props(), self.inject(
+                Caption, pick(self.props, 'icon', 'title')))
+        if 'link' in self.props:
+            return self.inject(Link, self.get_link_props(), result)
+        return result
+
+
 @register.era
 class Form(Tag):
     el = 'form'
+    inline = True
 
     def get_defaults(self):
         return {
+            'prefix': '',
             'action': self.request.path,
-            'form': self.context.get('form'),
-            'formsets': self.context.get('formsets', []),
             'method': 'POST',
             'novalidate': False,
             'inline': False,
-            'splitters': ''}
+            'splitters': '',
+            'formsets': []}
+
+    def get_context_prop(self, prop, default=None):
+        return self.context.get(
+            '_'.join(emptyless([self.props.prefix, prop])),
+            default)
+
+    def resolve_props(self):
+        return dict(
+            truthful(dict(map(
+                lambda p: (p, self.get_context_prop(p)),
+                ['form', 'formsets']))),
+            **self.get_context_prop('props', {}))
 
     def inject_field(self, field):
         return self.inject(
@@ -192,9 +222,13 @@ class Form(Tag):
                 self.inject(Formset, {'formset': formset})]),
             self.props.formsets))
 
-    def render_buttons(self):
+    def render_actions(self):
         return self.inject(
-            Group, {'class': 'buttons'}, self.props.nodelist)
+            Group,
+            {'class': 'actions'},
+            ''.join(map(
+                lambda action: self.inject(Action, action),
+                self.props.actions)))
 
     def get_nodelist(self):
         return ''.join(chain(
@@ -205,7 +239,7 @@ class Form(Tag):
                     or content and self.inject(Row, {}, content),
                 map(
                     lambda x: call(getattr(self, 'render_' + x)),
-                    ['fields', 'formsets', 'buttons']))))
+                    ['fields', 'formsets', 'actions']))))
 
     def resolve_attrs(self):
         return dict(
