@@ -17,6 +17,14 @@ def _(string):
     t.message = string
     return t
 
+def get_string(obj):
+    return obj if isinstance(obj, str) else obj.message
+
+def get_model_names(model):
+    return (
+        get_string(model._meta.verbose_name),
+        get_string(model._meta.verbose_name_plural))
+
 def verbose_choice(obj, f):
     return dict(obj._meta.get_field(f).choices).get(getattr(obj, f))
 
