@@ -1,7 +1,7 @@
 from itertools import chain
 from django.conf.urls import url, patterns
 from django.utils.module_loading import import_string
-from .translation import capitalize
+from .translation import capitalize, get_model_names
 
 
 def view_url(route, args=None, url_name=None, view_name=None, view_suffix='View'):
@@ -20,23 +20,26 @@ def view_url(route, args=None, url_name=None, view_name=None, view_suffix='View'
     return form_url
 
 
-def crud_urls(route, object_name):
-    return [
-        view_url(
-            route,
-            args=['add'],
-            url_name='-'.join([object_name, 'add']),
-            view_name=object_name),
-        view_url(route),
-        view_url(
-            route,
-            args=[r'(?P<pk>[0-9]+)'],
-            url_name='-'.join([object_name, 'update']),
-            view_name=object_name),
-        view_url(
-            route,
-            args=['delete'],
-            url_name='-'.join([route, 'delete']))]
+def crud_urls(*models):
+    def get_model_urls(model):
+        (object_name, route) = get_model_names(model)
+        return [
+            view_url(
+                route,
+                args=['add'],
+                url_name='-'.join([object_name, 'add']),
+                view_name=object_name),
+            view_url(route),
+            view_url(
+                route,
+                args=[r'(?P<pk>[0-9]+)'],
+                url_name='-'.join([object_name, 'update']),
+                view_name=object_name),
+            view_url(
+                route,
+                args=['delete'],
+                url_name='-'.join([route, 'delete']))]
+    return chain(*map(get_model_urls, models))
 
 
 def package_patterns(package, *urls):
