@@ -191,9 +191,10 @@ class Caption(Component):
     def DOM(self):
         if not 'icon' in self.props:
             return self.props.title
-        return ''.join([
-            self.inject(Icon, {'name': self.props.icon}),
-            self.inject(Tag, {'el': 'span'}, self.props.title)])
+        return self.inject(
+            Tag, {'el': 'span', 'class': 'caption'}, ''.join([
+                self.inject(Icon, {'name': self.props.icon}),
+                self.inject(Tag, {'el': 'span'}, self.props.title)]))
 
 
 @register.era
