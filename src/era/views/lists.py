@@ -2,6 +2,7 @@ from django.conf import settings
 from django.views.generic.list import BaseListView
 from ..components import ObjectsList, CRUD
 from ..utils.functools import just, call
+from ..utils.translation import get_string
 from .base import BaseView
 
 
@@ -18,22 +19,16 @@ class ListView(BaseView, BaseListView):
 
     def get_thead_items(self):
         return map(
-            lambda field: self.process_field(
-                field,
-                is_string=False,
-                fn=lambda f: self.model._meta.get_field(f).verbose_name),
+            lambda field:
+                field if not get_string(field) in self.model._meta.get_all_field_names() \
+                else self.model._meta.get_field(get_string(field)).verbose_name,
             self.list_display)
 
     def get_tbody_items(self, objects):
         return map(
             lambda item: {'pk': item.pk, 'fields': list(map(
                 lambda field: self.display_field(item, field),
-                map(
-                    lambda field: self.process_field(
-                        field,
-                        is_string=True,
-                        fn=lambda f: f.message),
-                    self.list_display)))},
+                map(get_string, self.list_display)))},
             objects)
 
     def display_field(self, item, field):
@@ -42,10 +37,6 @@ class ListView(BaseView, BaseListView):
             self, method, lambda: call(getattr(
                 item, method, lambda: getattr(
                     item, field)))))
-
-    def process_field(self, field, is_string=True, fn=just):
-        return field if is_string == isinstance(field, str) else fn(field)
-
 
 
 class CRUDView(ListView):

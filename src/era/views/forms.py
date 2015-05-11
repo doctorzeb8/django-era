@@ -7,6 +7,7 @@ from django.views.generic.edit import FormMixin
 from ..components import Form
 from ..forms import forms
 from ..utils.functools import throw, emptyless, unpack_args, omit, pick, select, reduce_dict
+from ..utils.translation import get_string
 from .base import BaseView
 
 
@@ -68,7 +69,7 @@ class FormView(BaseView, FormMixin):
                     props=self.get_form_props()))))
 
     def get_formset_method(self, suffix, prefix, **kw):
-        fmt = lambda s: s.format(prefix, suffix)
+        fmt = lambda s: s.format(get_string(prefix), suffix)
         method = getattr(
             self,
             fmt('get_{0}_formset_{1}'),

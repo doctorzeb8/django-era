@@ -235,8 +235,8 @@ class Form(Tag):
             [CsrfTokenNode().render(self.context)],
             map(
                 lambda content: '' if not content else \
-                    self.props.inline and content \
-                    or content and self.inject(Row, {}, content),
+                    self.props.inline and content or \
+                    self.inject(Row, {}, content),
                 map(
                     lambda x: call(getattr(self, 'render_' + x)),
                     ['fields', 'formsets', 'actions']))))
