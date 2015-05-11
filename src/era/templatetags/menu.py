@@ -1,5 +1,7 @@
+from django.apps import apps
 from django.core.urlresolvers import reverse, resolve
 from ..utils.functools import pick, omit
+from ..utils.translation import get_model_names
 from .library import register, Component, ComplexComponent, Tag
 from .markup import Link, Caption
 
@@ -21,19 +23,33 @@ class MenuItem(Tag):
         return self.inject(
             Link, pick(self.props, 'url', 'reverse'), self.props.caption)
 
+    def check_is_active(self, *args):
+        return resolve(self.request.path).url_name in args
+
     def resolve_props(self):
+        result = {}
         if self.props.divider:
             return {}
-        result = {'caption': self.inject(Caption, self.props.caption)}
-        if not 'active' in self.props:
+        elif 'model' in self.props:
+            model = apps.get_model(*self.props.model.split('.'))
+            self.props.caption['title'] = model._meta.verbose_name_plural
+            (prefix, url) = get_model_names(model)
+
+            result['url'] = url
+            result['active'] = self.check_is_active(
+                url, *map(
+                    lambda suffix: '-'.join([prefix, suffix]),
+                    ['add', 'update']))
+        elif not 'active' in self.props:
             if self.props.url and self.props.reverse:
-                result['active'] = resolve(self.request.path).url_name == self.props.url
+                result['active'] = self.check_is_active(self.props.url)
             else:
                 result['active'] = False
         if self.props.include is None:
             result['include'] = result.get('active', self.props.active)
         if self.props.disabled:
             result.update({'url': '#', 'reverse': False})
+        result['caption'] = self.inject(Caption, self.props.caption)
         return result
 
     def tweak(self):
