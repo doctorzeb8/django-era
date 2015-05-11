@@ -94,7 +94,7 @@ class Component(ClassyTag):
 
     def inject(self, cls, props=None, nodelist=None):
         return '' if not cls else cls().render_tag(self.context, **dict(
-            props or {}, **(nodelist and {'nodelist': nodelist} or {})))
+            props or {}, **(nodelist is not None and {'nodelist': nodelist} or {})))
 
     def join(self, *components):
         return ''.join(map(lambda x: self.inject(x), components))
@@ -137,7 +137,7 @@ class Component(ClassyTag):
         raise NotImplementedError
 
     def tweak(self):
-        if 'class' in self.props:
+        if not 'attrs' in self.props and 'class' in self.props:
             self.dom.add_class(self.props['class'])
 
 
@@ -147,6 +147,9 @@ class Inject(Component):
         return '' if not self.props.component else self.inject(
             lambda: self.props.component,
             omit(self.props, 'component'))
+
+    def tweak(self):
+        pass
 
 
 class ComplexComponent(Component):
@@ -170,6 +173,7 @@ class ComplexComponent(Component):
 class Tag(ComplexComponent):
     el = 'div'
     nobody = False
+    inline = False
 
     def get_nodelist(self):
         return self.props.nodelist
@@ -177,33 +181,33 @@ class Tag(ComplexComponent):
     def resolve_attrs(self):
         return {}
 
-    def resolve_prop(self, name):
-        return self.props.get(name, getattr(self, name))
-
-    def resolve_props(self):
+    def resolve_tag(self):
         attrs = dict(
-            self.props.pop('attrs', {}),
+            self.props.get('attrs', {}),
             **self.resolve_attrs())
         if 'id' in self.props:
-            attrs['id'] = self.props.pop('id')
+            attrs['id'] = self.props.id
         if 'class' in self.props:
             attrs['class'] = ' '.join(emptyless([
-                attrs.get('class', ''), self.props.pop('class')]))
+                attrs.get('class', ''),
+                self.props['class']]))
         return {
-            'el': self.resolve_prop('el'),
+            'el': self.props.get('el', getattr(self, 'el')),
             'attrs': ' '.join(reduce_dict(
                 lambda k, v: v and '{0}="{1}"'.format(k, v) or k,
                 attrs))}
 
     def set_options(self):
-        return super().set_options(**(self.nobody and {'blocks': []} or {}))
+        return super().set_options(**(
+            (self.inline or self.nobody) and {'blocks': []} or {}))
     
     def set_props(self, **kw):
         super().set_props(**kw)
+        self.props.update(self.resolve_tag())
         not self.nobody and self.props.update({'nodelist': self.get_nodelist()})
 
     def DOM(self):
         return ''.join([
             '<{el} {attrs}',
-            '/>' if self.resolve_prop('nobody') else '>{nodelist}</{el}>']) \
+            '/>' if self.nobody else '>{nodelist}</{el}>']) \
         .format(**self.props)
