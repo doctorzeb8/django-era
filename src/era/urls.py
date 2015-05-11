@@ -1,3 +1,4 @@
+from importlib import import_module
 from django.conf import settings
 from django.conf.urls import patterns, include, url
 from django.conf.urls.static import static
@@ -14,11 +15,18 @@ except ImportError:
         import_string(settings.INDEX_VIEW).as_view(),
         name='index'))
 
+def test_fitness(app):
+    try:
+        if not app in ['app', __package__]:
+            import_module(app + '.urls')
+            return True
+    except ImportError:
+        pass
+    return False
+
 urlpatterns += patterns('', *list(map(
     lambda app: url(r'', include(app + '.urls')),
-    filter(
-        lambda app: not app in ['app', __package__],
-        settings.MODULES))))
+    filter(test_fitness, settings.MODULES))))
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
