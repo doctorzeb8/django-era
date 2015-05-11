@@ -1,66 +1,29 @@
 from itertools import chain
-import re
-
 from django.conf import settings
-from django.contrib import messages
-from django.core.urlresolvers import reverse
-from django.shortcuts import redirect
-from django.utils.module_loading import import_string
-from django.views.generic.base import TemplateResponseMixin, View, RedirectView
+from django.core.urlresolvers import resolve
+from django.core.exceptions import ObjectDoesNotExist
+from django.http import Http404
 from django.views.generic.edit import FormMixin
-from django.views.generic.list import BaseListView
-
-from .forms import forms
-from .utils.functools import throw, unpack_args, omit, pick, select
-from .utils.translation import normalize
-
-
-class BaseViewMixin:
-    @property
-    def about(self):
-        return re.sub(r'-view$', '', normalize(self.__class__.__name__))
-
-    def send_message(self, level, content):
-        content and getattr(messages, level)(self.request, content)
-
-    def navigate(self, name):
-        return redirect(reverse(name))
+from ..components import Form
+from ..forms import forms
+from ..utils.functools import throw, emptyless, unpack_args, omit, pick, select, reduce_dict
+from .base import BaseView
 
 
-TemplateViewMixins = chain(
-    [BaseViewMixin],
-    list(map(import_string, settings.TEMPLATE_VIEW_MIXINS)),
-    [TemplateResponseMixin, View])
-
-
-class TemplateView(*TemplateViewMixins):
-    components = {}
-
-    def get(self, request, *args, **kwargs):
-        return getattr(super(), 'get', lambda r: None)(request) \
-            or self.render_to_response(self.get_context_data())
-
-    def get_components(self):
-        return {}
-
-    def get_context_data(self, **kw):
-        return dict(
-            super().get_context_data(**kw),
-            components=dict(self.components, **self.get_components()))
-
-    def get_template_names(self):
-        return list(map(lambda x: x + '.html', [self.about, 'index']))
-
-
-class FormView(TemplateView, FormMixin):
+class FormView(BaseView, FormMixin):
+    use_prefix = False
+    components = {'content': Form}
     form_class = forms.Form
     form_props = {}
     formsets = []
     truthtables = {}
-    success_message = None
     success_redirect = 'index'
+    success_message = settings.SUCCESS_SAVE_MESSAGE
+    actions = [dict(
+        {'icon': 'check-square', 'title': 'save', 'level': 'success'},
+        **settings.FORM_SUBMIT_ACTION)]
 
-    def post(self, request):
+    def post(self, request, *args, **kw):
         members = self.get_members()
         is_valid = all([
             members['form'].is_valid(),
@@ -70,19 +33,39 @@ class FormView(TemplateView, FormMixin):
         method = 'process_{0}valid'.format('' if is_valid else 'in')
         return getattr(self, method)(**members)
 
+    def get_prefix(self):
+        return self.prefix or (self.use_prefix and self.about or None)
+
+    def get_instance(self):
+        return None
+
     def get_members(self):
         return {
             'form': self.get_form(self.get_form_class()),
             'formsets': list(map(lambda p: self.get_formset(p), self.formsets))}
 
+    def get_actions(self):
+        return self.actions
+
+    def get_form_kwargs(self):
+        instance = self.get_instance()
+        return dict(
+            super().get_form_kwargs(),
+            **(instance and {'instance': instance} or {}))
+
     def get_form_props(self):
-        return self.form_props
+        return dict(self.form_props, actions=self.get_actions())
 
     def get_context_data(self, **members):
         return dict(
-            super().get_context_data(), **dict(
-                members or self.get_members(),
-                form_props=self.get_form_props()))
+            super().get_context_data(), **dict(reduce_dict(
+                lambda k, v: (
+                    k if not self.use_prefix else '_'.join(
+                        [self.get_prefix(), k]),
+                    v),
+                dict(
+                    members or self.get_members(),
+                    props=self.get_form_props()))))
 
     def get_formset_method(self, suffix, prefix, **kw):
         fmt = lambda s: s.format(prefix, suffix)
@@ -91,7 +74,9 @@ class FormView(TemplateView, FormMixin):
             fmt('get_{0}_formset_{1}'),
             kw.get('fallback', lambda: throw(
                 NotImplemented(fmt('can not get {0} formset {1}')))))
-        return method(**dict({'prefix': prefix}, **omit(kw, 'fallback')))
+        return method(**dict(
+            {'prefix': prefix, 'instance': self.get_instance()},
+            **omit(kw, 'fallback')))
 
     def get_truthtables(self, **kw):
         return list(map(
@@ -129,5 +114,20 @@ class FormView(TemplateView, FormMixin):
         return self.render_to_response(self.get_context_data(**kw))
 
 
-class ListView(TemplateView, BaseListView):
-    pass
+class ObjectView(FormView):
+    def get_actions(self):
+        return chain(
+            [dict({
+                'icon': 'caret-square-o-left',
+                'title': 'back',
+                'level': 'default',
+                'onclick': 'history.back()'},
+                **settings.FORM_BACK_ACTION)],
+            super().get_actions())
+
+    def get_instance(self):
+        pk = resolve(self.request.path).kwargs.get('pk')
+        try:
+            return pk and self.form_class._meta.model.objects.get(pk=pk)
+        except ObjectDoesNotExist:
+            raise Http404

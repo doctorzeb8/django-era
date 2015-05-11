@@ -59,8 +59,15 @@ STATICFILES_FINDERS = [
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 ROOT_URLCONF = 'era.urls'
 WSGI_APPLICATION = 'app.wsgi.application'
+
 INDEX_VIEW = 'app.views.IndexView'
-TEMPLATE_VIEW_MIXINS = []
+CRUD_PATTERN = True
+FORM_SUBMIT_ACTION = {}
+FORM_BACK_ACTION = {}
+LIST_ADD_ACTION = {}
+LIST_UPDATE_ACTION = {}
+LIST_DELETE_ACTION = {}
+SUCCESS_SAVE_MESSAGE = None
 
 TIME_ZONE = 'UTC'
 USE_TZ = True
