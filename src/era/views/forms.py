@@ -132,3 +132,6 @@ class ObjectView(FormView):
             return pk and self.form_class._meta.model.objects.get(pk=pk)
         except ObjectDoesNotExist:
             raise Http404
+
+    def get_form_props(self):
+        return dict(super().get_form_props(), panels=True)

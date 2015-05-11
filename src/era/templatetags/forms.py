@@ -5,7 +5,7 @@ from django.template.defaulttags import CsrfTokenNode
 
 from ..utils.functools import call, emptyless, truthful, pick, omit, unpack_args, separate
 from .library import register, Component, Tag
-from .markup import Row, Column, Table, Link, Button, Caption
+from .markup import Row, Column, Table, Link, Button, Caption, Panel
 
 
 class WidgetCaseMixin:
@@ -177,6 +177,7 @@ class Form(Tag):
             'method': 'POST',
             'novalidate': False,
             'inline': False,
+            'panels': False,
             'splitters': '',
             'formsets': []}
 
@@ -213,14 +214,30 @@ class Form(Tag):
                     {'md': int(12 / len(columns))},
                     ''.join(map(self.inject_field, column))),
                 columns))
-        return ''.join(map(self.inject_field, self.props.form))
+        result = ''.join(map(self.inject_field, self.props.form))
+        if self.props.panels:
+            return self.inject(Panel, {
+                'level': 'primary',
+                'body': result,
+                'title': self.props.form.instance.pk \
+                    and str(self.props.form.instance) or self.inject(
+                    Caption, {
+                        'icon': 'plus',
+                        'title': self.props.form._meta.model._meta.verbose_name})})
+        return result
+
+    def render_formset(self, formset):
+        result = ''.join([
+            str(formset.management_form),
+            self.inject(Formset, {'formset': formset})])
+        if self.props.panels:
+            return self.inject(Panel, {
+                'body': result,
+                'title': formset.prefix})
+        return result
 
     def render_formsets(self):
-        return ''.join(map(
-            lambda formset: ''.join([
-                str(formset.management_form),
-                self.inject(Formset, {'formset': formset})]),
-            self.props.formsets))
+        return ''.join(map(self.render_formset, self.props.formsets))
 
     def render_actions(self):
         return self.inject(
