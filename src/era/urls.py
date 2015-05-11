@@ -5,16 +5,11 @@ from django.contrib import admin
 from django.utils.module_loading import import_string
 
 
-urlpatterns = patterns(
-    '',
-    url(r'^grappelli/', include('grappelli.urls')),
-    url(r'^admin/', include(admin.site.urls)))
-
 try:
     from app.urls import urlpatterns as index
-    urlpatterns += index
+    urlpatterns = index
 except ImportError:
-    urlpatterns += patterns('', url(
+    urlpatterns = patterns('', url(
         r'^$',
         import_string(settings.INDEX_VIEW).as_view(),
         name='index'))
