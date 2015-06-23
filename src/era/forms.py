@@ -1,7 +1,12 @@
 from django import forms
 from django.templatetags.static import static
 from bootstrap3_datetime.widgets import DateTimePicker
-from .utils.functools import avg
+from .utils.functools import first, avg
+
+
+class EmptyWidget(forms.widgets.Widget):
+    def render(self, *args, **kw):
+        return ''
 
 
 class Slider(forms.widgets.TextInput):
@@ -23,3 +28,10 @@ class Slider(forms.widgets.TextInput):
         super().__init__(dict(map(
             lambda t: ('data-slider-' + t[0], t[1]),
             attrs.items())))
+
+
+class FixedSelect(forms.widgets.Select):
+    def render(self, name, value, attrs=None, choices=()):
+        return ''.join([
+            str(list(filter(lambda c: c[0] == value, self.choices))[0][1]),
+            forms.widgets.HiddenInput().render(name, value)])
