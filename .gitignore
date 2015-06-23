@@ -1,4 +1,3 @@
-env
-bower_components
 __pycache__
-TODO
+dist
+*.egg-info
