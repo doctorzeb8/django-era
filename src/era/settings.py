@@ -1,11 +1,13 @@
 import os
 import sys
+import django
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
+    'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
@@ -21,6 +23,7 @@ BOWER_INSTALLED_APPS = [
     'underscore',
     'bootstrap',
     'seiyria-bootstrap-slider',
+    'sass-bootstrap-glyphicons',
     'fontawesome'
 ]
 
@@ -61,20 +64,10 @@ ROOT_URLCONF = 'era.urls'
 WSGI_APPLICATION = 'app.wsgi.application'
 
 INDEX_VIEW = 'app.views.IndexView'
-CRUD_PATTERN = True
-FORM_SUBMIT_ACTION = {}
-FORM_BACK_ACTION = {}
-LIST_ADD_ACTION = {}
-LIST_UPDATE_ACTION = {}
-LIST_DELETE_ACTION = {}
-SUCCESS_SAVE_MESSAGE = None
-
-TIME_ZONE = 'UTC'
-USE_TZ = True
 USE_I18N = True
 
 DATE_FORMAT = 'd.m.Y'
-DATETIME_FORMAT = 'd.m.Y H:s'
+DATETIME_FORMAT = 'd.m.Y H:M'
 DATE_INPUT_FORMATS = ('%d.%m.%Y', )
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' 
@@ -89,6 +82,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
 MEDIA_URL = '/uploads/'
 LOCALE_PATHS = (
     os.path.join(BASE_DIR, 'locales'),
+    os.path.join(os.path.dirname(django.__file__), 'contrib', 'admin', 'locale')
 )
 
 DATABASES = {

@@ -8,16 +8,20 @@
 
     <title>{% block title %}{{ page_title|capfirst }}{% endblock %}</title>
     {% favicon url='favicon.png' %}
+    {% stylesheet url='sass-bootstrap-glyphicons/css/bootstrap-glyphicons.css' %}
     {% stylesheet url='fontawesome/css/font-awesome.min.css' %}
-    {% script url='moment/min/moment.min.js' %}
-    {% script url='jquery/dist/jquery.min.js' %}
-    {% script url='underscore/underscore-min.js' %}
-    {% script url='bootstrap/dist/js/bootstrap.min.js' %}
-    <script>var django = {jQuery: $}</script>
 
-    {% media %}
+    {% block scripts %}
+        {% script url='moment/min/moment.min.js' %}
+        {% script url='jquery/dist/jquery.min.js' %}
+        {% script url='underscore/underscore-min.js' %}
+        {% script url='bootstrap/dist/js/bootstrap.min.js' %}
+        <script>var django = {jQuery: $}</script>
+        {{ media }}
+    {% endblock %}
+
     {% block head %}
-        {% stylesheet src='bootstrap/dist/css/bootstrap.min.css' %}
+        {% stylesheet url='bootstrap/dist/css/bootstrap.min.css' %}
     {% endblock %}
 
     <!--[if lt IE 9]>
