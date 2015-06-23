@@ -3,7 +3,9 @@ from django.forms import widgets
 from django.forms.widgets import TextInput, Textarea, CheckboxInput
 from django.template.defaulttags import CsrfTokenNode
 
-from ..utils.functools import call, emptyless, truthful, pick, omit, unpack_args, separate
+from ..forms import EmptyWidget
+from ..utils.functools import call, unpack_args, emptyless, pluck, separate, \
+    get, pick, omit, truthful
 from .library import register, Component, Tag
 from .markup import Row, Column, Table, Link, Button, Caption, Panel
 
@@ -12,8 +14,7 @@ class WidgetCaseMixin:
     @property
     def text_input_widgets(self):
         return list(map(
-            lambda x: getattr(widgets, x),
-            [
+            lambda x: getattr(widgets, x), [
                 'TextInput', 'NumberInput', 'EmailInput',
                 'URLInput', 'PasswordInput', 'Textarea', 'Select']))
 
@@ -70,7 +71,9 @@ class Group(Tag):
     def resolve_attrs(self):
         return {'class': ' '.join(emptyless([
             'form-group',
-            {True: 'has-success', False: 'has-error', None: ''}.get(self.is_valid)]))}
+            get(self.is_valid, {
+                True: 'has-success',
+                False: 'has-error', None: ''})]))}
 
 
 class Field(WidgetCaseMixin, Group):
@@ -114,34 +117,38 @@ class Field(WidgetCaseMixin, Group):
             self.get_help_block() or ''])
 
 
-class Formset(Table):
-    def get_slice(self):
-        have_instances = any([f.instance.pk for f in self.props.formset.forms])
-        return (0, -1 if self.props.formset.can_delete and not have_instances else None)
-
-    def get_form_fields(self, form):
-        draw_last = lambda: not (self.props.formset.can_delete and not form.instance.pk)
+class FieldsetMixin:
+    def render_fieldset(self, form, **props):
         [hidden, fields] = separate(lambda f: not f.is_hidden, form)
-
         return map(unpack_args(
             lambda i, field: ''.join([
                 '' if i else ''.join(map(lambda f: f.as_widget(), hidden)),
-                '' if len(fields) == (i + 1) and not draw_last() else self.inject(
-                    Field, {
-                        'field': field,
-                        'inline': False,
-                        'set_label': False,
-                        'set_required': False})])),
+                self.inject(Field, dict({'field': field}, **props))])),
             enumerate(fields))
+
+
+class Formset(Table, FieldsetMixin):
+    def get_slice(self):
+        have_instances = any([f.instance.pk for f in self.props.formset.forms])
+        return (0, -1 if self.props.formset.can_delete and not have_instances else None)
 
     def get_thead_items(self):
         return emptyless(map(
             lambda f: not f.is_hidden and f.label,
             self.props.formset.forms[0]))
 
+    def get_form_fields(self, form):
+        if self.props.formset.can_delete and not form.instance.pk:
+            form.fields['DELETE'].widget = EmptyWidget()
+        return tuple(form)
+
     def get_tbody_items(self):
         return map(
-            lambda form: {'items': self.get_form_fields(form)},
+            lambda form: {'items': self.render_fieldset(
+                self.get_form_fields(form),
+                inline=False,
+                set_label=False,
+                set_required=False)},
             self.props.formset.forms)
 
 
@@ -166,7 +173,7 @@ class Action(Component):
 
 
 @register.era
-class Form(Tag):
+class Form(Tag, FieldsetMixin):
     el = 'form'
     inline = True
 
@@ -178,7 +185,9 @@ class Form(Tag):
             'novalidate': False,
             'inline': False,
             'panels': False,
-            'splitters': '',
+            'title': '',
+            'splitters': [],
+            'relations': [],
             'formsets': []}
 
     def get_context_prop(self, prop, default=None):
@@ -186,58 +195,71 @@ class Form(Tag):
             '_'.join(emptyless([self.props.prefix, prop])),
             default)
 
+    def resolve_enctype(self):
+        if any(map(
+            lambda x: x.is_multipart(),
+            chain(
+                [self.props.form],
+                pluck(self.props.relations, 'form'),
+                self.props.formsets))):
+            return 'multipart/form-data'
+        return 'application/x-www-form-urlencoded'
+
     def resolve_props(self):
         return dict(
             truthful(dict(map(
                 lambda p: (p, self.get_context_prop(p)),
-                ['form', 'formsets']))),
+                ['form', 'relations', 'formsets']))),
             **self.get_context_prop('props', {}))
-
-    def inject_field(self, field):
-        return self.inject(
-            Field, dict({'field': field}, **pick(self.props, 'inline')))
 
     def split_fields(self):
         result = [[]]
         for field in self.props.form:
             result[-1].append(field)
-            if field.name in self.props.splitters.split(' '):
+            if field.name in self.props.splitters:
                 result.append([])
         return result
+
+    def render_panel(self, **kw):
+        if self.props.panels:
+            if kw['body']:
+                return self.inject(Panel, kw)
+        return kw['body']
 
     def render_fields(self):
         if self.props.splitters:
             columns = self.split_fields()
-            return ''.join(map(
+            result = ''.join(map(
                 lambda column: self.inject(
                     Column,
                     {'md': int(12 / len(columns))},
-                    ''.join(map(self.inject_field, column))),
+                    ''.join(self.render_fieldset(
+                        column,
+                        **pick(self.props, 'inline')))),
                 columns))
-        result = ''.join(map(self.inject_field, self.props.form))
-        if self.props.panels:
-            return self.inject(Panel, {
-                'level': 'primary',
-                'body': result,
-                'title': self.props.form.instance.pk \
-                    and str(self.props.form.instance) or self.inject(
-                    Caption, {
-                        'icon': 'plus',
-                        'title': self.props.form._meta.model._meta.verbose_name})})
-        return result
+        else:
+            result = ''.join(self.render_fieldset(
+                self.props.form,
+                **pick(self.props, 'inline')))
+        return self.render_panel(title=self.props.title, body=result)
 
-    def render_formset(self, formset):
-        result = ''.join([
-            str(formset.management_form),
-            self.inject(Formset, {'formset': formset})])
-        if self.props.panels:
-            return self.inject(Panel, {
-                'body': result,
-                'title': formset.prefix})
-        return result
+    def render_relations(self):
+        return ''.join(map(
+            lambda relation: self.render_panel(
+                title=relation['field'].verbose_name,
+                body=''.join(self.render_fieldset(
+                    relation['form'],
+                    set_required=not relation['field'].blank))),
+            self.props.relations))
 
     def render_formsets(self):
-        return ''.join(map(self.render_formset, self.props.formsets))
+        return ''.join(map(
+            lambda formset: self.render_panel(
+                title=formset.model._meta.verbose_name_plural,
+                body=''.join([
+                    str(formset.management_form),
+                    self.inject(Formset, {'formset': formset})])),
+            self.props.formsets))
 
     def render_actions(self):
         return self.inject(
@@ -254,9 +276,7 @@ class Form(Tag):
                 lambda content: '' if not content else \
                     self.props.inline and content or \
                     self.inject(Row, {}, content),
-                map(
-                    lambda x: call(getattr(self, 'render_' + x)),
-                    ['fields', 'formsets', 'actions']))))
+                self.build(('fields', 'relations', 'formsets', 'actions')))))
 
     def resolve_attrs(self):
         return dict(
@@ -264,6 +284,4 @@ class Form(Tag):
             'class': 'form',
             'method': self.props.method,
             'action': self.props.action,
-            'enctype': 'multipart/form-data' if self.props.form.is_multipart() \
-                or any(map(lambda form: form.is_multipart(), self.props.formsets)) \
-                else 'application/x-www-form-urlencoded'})
+            'enctype': self.resolve_enctype()})

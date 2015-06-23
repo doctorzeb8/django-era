@@ -1,7 +1,12 @@
+from itertools import chain
+from django.conf import settings
 from django.apps import apps
 from django.core.urlresolvers import reverse, resolve
-from ..utils.functools import pick, omit
-from ..utils.translation import get_model_names
+from django.utils.text import capfirst
+
+from ..utils.functools import emptyless, pick, omit
+from ..utils.translation import get_string, get_model_names
+from ..utils.urls import exists_import
 from .library import register, Component, ComplexComponent, Tag
 from .markup import Link, Caption
 
@@ -32,14 +37,14 @@ class MenuItem(Tag):
             return {}
         elif 'model' in self.props:
             model = apps.get_model(*self.props.model.split('.'))
-            self.props.caption['title'] = model._meta.verbose_name_plural
-            (prefix, url) = get_model_names(model)
+            self.props.caption['title'] = get_model_names(model)[-1]
+            (prefix, url) = map(get_string, get_model_names(model))
 
             result['url'] = url
             result['active'] = self.check_is_active(
                 url, *map(
                     lambda suffix: '-'.join([prefix, suffix]),
-                    ['add', 'update']))
+                    ['add', 'edit']))
         elif not 'active' in self.props:
             if self.props.url and self.props.reverse:
                 result['active'] = self.check_is_active(self.props.url)
@@ -105,3 +110,24 @@ class DropdownMenu(Component):
                     ''.join(map(
                         lambda i: self.inject(MenuItem, i),
                         self.props.menu)))]))
+
+
+@register.era
+class MainMenu(Menu):
+    def get_app_menu_items(self, cls):
+        result = cls()
+        result.request = self.request
+        result.context = self.context
+        return result.get_items()
+
+    def get_items(self):
+        return list(chain(*map(
+            self.get_app_menu_items,
+            emptyless(map(
+                lambda module: getattr(
+                    module,
+                    ''.join([capfirst(module.__package__), 'Menu']),
+                    None),
+                emptyless(map(
+                    lambda app: exists_import('.'.join([app, 'components'])),
+                    settings.MODULES)))))))

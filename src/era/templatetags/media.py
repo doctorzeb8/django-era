@@ -1,19 +1,10 @@
 from itertools import chain, groupby
-from django import forms
 from django.templatetags.static import static
 from django.utils.text import capfirst
 
 from ..utils.functools import just
 from .library import register, Component, Tag
 from .markup import Alert
-
-
-@register.era
-class Media(Component):
-    def DOM(self):
-        types = (forms.Form, forms.ModelForm)
-        media = [obj.media for obj in self.context.dicts[1].values() if isinstance(obj, types)]
-        return '\n'.join([x for x, _y in groupby('\n'.join([str(m) for m in media]).split('\n'))])
 
 
 class Include(Tag):

@@ -22,6 +22,18 @@ class Icon(Component):
                             ('size', 'list', 'large', 'fixed', 'spin', 'rotate'))))))})
 
 
+class MarkedList(Tag):
+    el = 'ul'
+
+    def get_items(self):
+        return self.props.items
+
+    def get_nodelist(self):
+        return ''.join(map(
+            lambda item: '<li>{0}</li>'.format(item),
+            self.get_items()))
+
+
 class IconicList(Component):
     def get_defaults(self):
         return {'icon': 'asterisk', 'heading': 'h4'}
@@ -52,10 +64,12 @@ class Break(Component):
     def resolve_props(self):
         return {
             'x': int(self.props.x),
-            'c': self.props.ruler and 'h' or 'b'}
+            'tag': '<{0}r />'.format(self.props.ruler and 'h' or 'b')}
 
     def DOM(self):
-        return self.props.x * '<{0}r />'.format(self.props.c)
+        if 'join' in self.props:
+            return self.props.tag.join(self.props.join)
+        return self.props.x * self.props.tag
 
 
 @register.era
@@ -127,11 +141,14 @@ class Link(Tag):
                     self.props.rel])}
         return {}
 
+    def get_url(self):
+        return self.props.url
+
     def resolve_attrs(self):
         return {
             'target': self.props.newtab and '_blank' or '_self',
             'href': (self.props.reverse and reverse or just)(
-                self.props.url, **pick(self.props, 'args', 'kwargs'))}
+                self.get_url(), **pick(self.props, 'args', 'kwargs'))}
 
 
 @register.era
@@ -272,7 +289,7 @@ class Table(Component):
             'condensed': True,
             'responsive': True}
 
-    def render_content(self, content):
+    def render_content(self, content, cell):
         if isinstance(content, bool):
             return self.inject(
                 Icon,
@@ -288,7 +305,7 @@ class Table(Component):
                     lambda c: self.inject(
                         Tag,
                         {'el': cell},
-                        self.render_content(c)),
+                        self.render_content(c, cell)),
                     self.slice(row['items'])))),
             items))
 

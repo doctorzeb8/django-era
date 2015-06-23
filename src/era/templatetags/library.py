@@ -7,8 +7,8 @@ from classytags.core import Options
 from classytags.core import Tag as ClassyTag
 from django.template import Library, TemplateSyntaxError
 
-
-from ..utils.functools import unpack_args, reduce_dict, truthful, emptyless, pick, omit
+from ..utils.functools import call, unpack_args, reduce_dict, map_values, \
+    truthful, emptyless, pick, omit
 from ..utils.translation import normalize
 
 
@@ -99,6 +99,9 @@ class Component(ClassyTag):
     def join(self, *components):
         return ''.join(map(lambda x: self.inject(x), components))
 
+    def build(self, args, prefix='render'):
+        return map(lambda arg: call(getattr(self, '_'.join([prefix, arg]))), args)
+
     def get_defaults(self):
         return {}
 
@@ -117,9 +120,7 @@ class Component(ClassyTag):
     def set_props(self, **kw):
         self.props = Props(
             self.get_defaults(),
-            **dict(kw, **dict(reduce_dict(
-                lambda k, v: (k, v.render(self.context)),
-                self.blocks))))
+            **dict(kw, **map_values(lambda val: val.render(self.context), self.blocks)))
         self.props.update(self.resolve_props())
 
     def render_tag(self, context, mka=None, **kw):
