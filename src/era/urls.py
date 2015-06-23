@@ -1,9 +1,11 @@
-from importlib import import_module
 from django.conf import settings
 from django.conf.urls import patterns, include, url
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.utils.module_loading import import_string
+
+from .utils.translation import _
+from .utils.urls import exists_import, http_error
 
 
 try:
@@ -15,18 +17,17 @@ except ImportError:
         import_string(settings.INDEX_VIEW).as_view(),
         name='index'))
 
-def test_fitness(app):
-    try:
-        if not app in ['app', __package__]:
-            import_module(app + '.urls')
-            return True
-    except ImportError:
-        pass
-    return False
-
 urlpatterns += patterns('', *list(map(
     lambda app: url(r'', include(app + '.urls')),
-    filter(test_fitness, settings.MODULES))))
+    filter(
+        lambda app: not app in ['app', __package__] \
+            and exists_import('.'.join([app, 'urls'])),
+        settings.MODULES))))
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+
+handler403 = http_error(403, _('None available'))
+handler404 = http_error(404, _('Page not found'))
+handler500 = http_error(500, _('Server error'))

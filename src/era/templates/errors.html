@@ -1,0 +1,18 @@
+{% extends 'base.html' %}
+{% load media %}
+{% load markup %}
+
+{% block scripts %}{% endblock %}
+{% block head %}
+    <style>
+        body {text-align: center; }
+        h1 {font-size: 3em;}
+        a {color: #000; text-decoration: none !important;}
+        .caption i.fa {width: 50px;}
+    </style>
+{% endblock %}
+{% block body %}
+    {% tag el='h1' %}{{ code }}{% end-tag %}
+    {% tag el='h2' %}{{ page_title }}{% end-tag %}
+    {% link url='index' %}{% icon name='home' size=4 %}{% end-link %}
+{% endblock %}
