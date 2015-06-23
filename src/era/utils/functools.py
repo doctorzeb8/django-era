@@ -6,13 +6,16 @@ from django.utils.functional import curry
 
 
 def just(*x, **kw):
-    return x[0]
+    return len(x) and x[0] or kw
 
-def avg(*args):
-    return reduce(lambda x, y: x + y, args) / len(args)
+def call(fn):
+    return fn()
 
-def random_str(length=6, source=digits):
-    return ''.join(map(lambda i: choice(source), range(0, length)))
+def swap(a, fn):
+    return fn(a)
+
+def unpack_args(fn):
+    return lambda t: fn(*t)
 
 def throw(exception):
     raise exception
@@ -37,19 +40,16 @@ def unidec(fnx):
         if len(ax) == 1 and not kx and callable(ax[0]) else \
         lambda fny: wraps(fny)(lambda *ay, **ky: \
         fnx(fny, *ay, **dict(kx, **ky)) if not ax else throw(
-            DeprecationWarning('wrapper get *args'))))
+            TypeError('wrapper get *args'))))
 
-def call(fn):
-    return fn()
-
-def swap(a, fn):
-    return fn(a)
-
-def unpack_args(fn):
-    return lambda t: fn(*t)
 
 def pluck(l, k):
-    return map(lambda o: o.get(k) if isinstance(o, dict) else getattr(o, k), l)
+    return list(map(
+        lambda o: o.get(k) if isinstance(o, dict) \
+        else reduce(lambda x, y: getattr(x, y, None), k.split('.'), o), l))
+
+def first(seq):
+    return list(seq)[0]
 
 def select(i, l):
     return l[i - len(l) * int(i / len(l))]
@@ -65,15 +65,16 @@ def separate(fn, lx):
                 ly)),
         enumerate(tee(lx, 2))))
 
-def reduce_dict(fn, d):
-    return map(unpack_args(fn), d.items())
+
+def get(k, *dl, **kw):
+    return dict(len(dl) and dl[0] or {}, **kw).get(k)
 
 @unidec
 def dict_copy(fn, d, *a):
     return {k: v for k, v in d.items() if fn(k, v, *a)}
 
 @dict_copy
-def pick(k, v, *a, **kw):
+def pick(k, v, *a):
     return k in a
 
 @dict_copy
@@ -83,3 +84,28 @@ def omit(k, v, *a):
 @dict_copy
 def truthful(k, v, *a):
     return bool(v)
+
+def filter_dict(fn, d):
+    return dict_copy(fn)(d)
+
+def reduce_dict(fn, d):
+    return map(unpack_args(fn), d.items())
+
+@unidec
+def dict_map(fnx, fny, d):
+    return dict(reduce_dict(lambda k, v: fnx(k, v, fny), d))
+
+@dict_map
+def map_keys(k, v, fn):
+    return (fn(k), v)
+
+@dict_map
+def map_values(k, v, fn):
+    return (k, fn(v))
+
+
+def avg(*args):
+    return reduce(lambda x, y: x + y, args) / len(args)
+
+def random_str(length=6, source=digits):
+    return ''.join(map(lambda i: choice(source), range(0, length)))

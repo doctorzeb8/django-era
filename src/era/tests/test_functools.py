@@ -1,4 +1,4 @@
-from ..utils.functools import unidec, avg, pick, omit, truthful, pluck, separate
+from ..utils.functools import unidec, pluck, separate, pick, omit, truthful, avg
 from .base import SimpleTestCase, IsOkTestCase
 
 
@@ -43,7 +43,7 @@ class DictCopyTestCase(SimpleTestCase):
 class PluckTestCase(SimpleTestCase):
     def test_dict(self):
         self.assertEqual(
-            list(pluck([{0: 0}, {0: 1, 1: 1}, {0: 2, 1: 1, 2: 2}], 0)),
+            pluck([{0: 0}, {0: 1, 1: 1}, {0: 2, 1: 1, 2: 2}], 0),
             [0, 1, 2])
 
     def test_obj(self):
@@ -52,5 +52,5 @@ class PluckTestCase(SimpleTestCase):
                 self.x = x
 
         self.assertEqual(
-            list(pluck([O(1), O(2), O(3)], 'x')),
+            pluck([O(1), O(2), O(3)], 'x'),
             [1, 2, 3])
