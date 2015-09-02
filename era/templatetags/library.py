@@ -149,9 +149,6 @@ class Inject(Component):
             lambda: self.props.component,
             omit(self.props, 'component'))
 
-    def tweak(self):
-        pass
-
 
 class ComplexComponent(Component):
     parts = []
@@ -212,3 +209,9 @@ class Tag(ComplexComponent):
             '<{el} {attrs}',
             '/>' if self.nobody else '>{nodelist}</{el}>']) \
         .format(**self.props)
+
+
+@register.era
+class Content(Component):
+    def DOM(self):
+        return self.inject(self.context['components'].get('content', None))
