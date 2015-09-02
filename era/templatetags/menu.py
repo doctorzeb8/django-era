@@ -1,7 +1,7 @@
 from itertools import chain
 from django.conf import settings
 from django.apps import apps
-from django.core.urlresolvers import reverse, resolve
+from django.core.urlresolvers import resolve
 from django.utils.text import capfirst
 
 from ..utils.functools import emptyless, pick, omit
@@ -11,7 +11,12 @@ from .library import register, Component, ComplexComponent, Tag
 from .markup import Link, Caption
 
 
-class MenuItem(Tag):
+class NavigationMixin:
+    def check_active(self, *args):
+        return resolve(self.request.path).url_name in args
+
+
+class MenuItem(NavigationMixin, Tag):
     el = 'li'
 
     def get_defaults(self):
@@ -28,9 +33,6 @@ class MenuItem(Tag):
         return self.inject(
             Link, pick(self.props, 'url', 'reverse'), self.props.caption)
 
-    def check_is_active(self, *args):
-        return resolve(self.request.path).url_name in args
-
     def resolve_props(self):
         result = {}
         if self.props.divider:
@@ -41,13 +43,13 @@ class MenuItem(Tag):
             (prefix, url) = map(get_string, get_model_names(model))
 
             result['url'] = url
-            result['active'] = self.check_is_active(
+            result['active'] = self.check_active(
                 url, *map(
                     lambda suffix: '-'.join([prefix, suffix]),
                     ['add', 'edit']))
         elif not 'active' in self.props:
             if self.props.url and self.props.reverse:
-                result['active'] = self.check_is_active(self.props.url)
+                result['active'] = self.check_active(self.props.url)
             else:
                 result['active'] = False
         if self.props.include is None:
@@ -67,7 +69,7 @@ class MenuItem(Tag):
         super().tweak()
 
 
-class Menu(Component):
+class Menu(NavigationMixin, Component):
     def get_items(self):
         return self.props.items
 
@@ -88,7 +90,7 @@ class Menu(Component):
             ''.join(map(self.render_item, self.get_items())))
 
 
-class DropdownMenu(Component):
+class DropdownMenu(NavigationMixin, Component):
     def DOM(self):
         return self.inject(
             Tag, {'el': 'li', 'class': 'dropdown'}, ''.join([
