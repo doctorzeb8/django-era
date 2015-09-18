@@ -130,7 +130,8 @@ class Link(Tag):
             'url': 'index',
             'args': [],
             'kwargs': {},
-            'rel': None}
+            'rel': None,
+            'qs': None}
 
     def resolve_props(self):
         if self.props.rel:
@@ -142,6 +143,8 @@ class Link(Tag):
         return {}
 
     def get_url(self):
+        if self.props.qs:
+            return '?'.join([self.props.url, self.props.qs])
         return self.props.url
 
     def resolve_attrs(self):

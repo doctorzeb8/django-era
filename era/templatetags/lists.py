@@ -1,4 +1,5 @@
 from itertools import chain
+from urllib.parse import quote
 from django.core.urlresolvers import resolve
 
 from ..utils.functools import call, unpack_args, emptyless, pick
@@ -173,9 +174,15 @@ class SearchLine(Tag):
 
 
 class ChangeList(ObjectsList):
+    def get_location_qs(self):
+        return '='.join(['next', quote(self.request.get_full_path())])
+
     def render_row(self, row):
         return {'items': chain(
-            [self.inject(Link, {'rel': str(row['pk'])}, row['fields'][0])],
+            [self.inject(
+                Link,
+                {'rel': str(row['pk']), 'qs': self.get_location_qs()},
+                row['fields'][0])],
             row['fields'][1:])}
 
     def render_queryset(self):
@@ -185,7 +192,11 @@ class ChangeList(ObjectsList):
         return table
 
     def render_actions(self):
-        return map(lambda action: self.inject(Action, action), self.props.actions)
+        result = ''
+        for action in self.props.actions:
+            action['link']['qs'] = self.get_location_qs()
+            result += self.inject(Action, action)
+        return result
 
     def render_search(self):
         return '' if not self.props.search else self.inject(SearchLine)

@@ -1,5 +1,6 @@
 from functools import reduce
 from itertools import chain
+from urllib.parse import unquote
 
 from django.conf import settings
 from django.core.urlresolvers import resolve, reverse
@@ -281,6 +282,8 @@ class ObjectView(FormView):
             title=self.instance and str(self.instance) or self.model._meta.verbose_name)
 
     def get_success_redirect(self, **kw):
+        if 'next' in self.request.GET:
+            return unquote(self.request.GET['next'])
         return reverse(self.get_model_name('plural'))
 
     def get_success_message(self, **kw):

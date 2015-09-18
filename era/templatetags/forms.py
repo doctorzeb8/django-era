@@ -180,7 +180,7 @@ class Form(Tag, FieldsetMixin):
     def get_defaults(self):
         return {
             'prefix': '',
-            'action': self.request.path,
+            'action': self.request.get_full_path(),
             'method': 'POST',
             'novalidate': False,
             'inline': False,
