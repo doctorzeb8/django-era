@@ -3,7 +3,7 @@ from django.forms import widgets
 from django.forms.widgets import TextInput, Textarea, CheckboxInput
 from django.template.defaulttags import CsrfTokenNode
 
-from ..forms import EmptyWidget
+from ..forms import EmptyWidget, DateTimePicker
 from ..utils.functools import call, unpack_args, emptyless, pluck, separate, \
     get, pick, omit, truthful
 from .library import register, Component, Tag
@@ -13,7 +13,7 @@ from .markup import Row, Column, Table, Link, Button, Caption, Panel
 class WidgetCaseMixin:
     @property
     def text_input_widgets(self):
-        return list(map(
+        return [DateTimePicker] + list(map(
             lambda x: getattr(widgets, x), [
                 'TextInput', 'NumberInput', 'EmailInput',
                 'URLInput', 'PasswordInput', 'Textarea', 'Select']))

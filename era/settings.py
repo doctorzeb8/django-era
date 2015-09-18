@@ -13,7 +13,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'djangobower',
-    'bootstrap3_datetime',
     'era'
 ]
 
@@ -23,7 +22,7 @@ BOWER_INSTALLED_APPS = [
     'underscore',
     'bootstrap',
     'seiyria-bootstrap-slider',
-    'sass-bootstrap-glyphicons',
+    'eonasdan-bootstrap-datetimepicker',
     'fontawesome'
 ]
 
@@ -66,11 +65,12 @@ WSGI_APPLICATION = 'app.wsgi.application'
 INDEX_VIEW = 'app.views.IndexView'
 USE_I18N = True
 
-DATE_FORMAT = 'd.m.Y'
-DATETIME_FORMAT = 'd.m.Y H:M'
-DATE_INPUT_FORMATS = ('%d.%m.%Y', )
+#DATE_FORMAT = 'd.m.Y'
+#DATETIME_FORMAT = 'd.m.Y H:M'
+DATE_INPUT_FORMAT = 'DD.MM.YY'
+DATETIME_INPUT_FORMAT = 'DD.MM.YY HH:mm'
 
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend' 
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_RUNNER = 'era.tests.runner.NoDbDiscoverRunner'
 SECRET_KEY = 'era'
 

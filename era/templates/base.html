@@ -6,13 +6,12 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
-    <title>{% block title %}{{ page_title|capfirst }}{% endblock %}</title>
+    <title>{% block title %}{{ page_title }}{% endblock %}</title>
     {% favicon url='favicon.png' %}
-    {% stylesheet url='sass-bootstrap-glyphicons/css/bootstrap-glyphicons.css' %}
     {% stylesheet url='fontawesome/css/font-awesome.min.css' %}
 
     {% block scripts %}
-        {% script url='moment/min/moment.min.js' %}
+        {% script url='moment/min/moment-with-locales.min.js' %}
         {% script url='jquery/dist/jquery.min.js' %}
         {% script url='underscore/underscore-min.js' %}
         {% script url='bootstrap/dist/js/bootstrap.min.js' %}

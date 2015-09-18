@@ -1,16 +1,18 @@
 from functools import reduce
 from itertools import chain
 
+from django.conf import settings
 from django.core.urlresolvers import resolve, reverse
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import OneToOneField
+from django.forms.fields import DateField, DateTimeField
 from django.forms.models import modelform_factory, inlineformset_factory
 from django.http import Http404
 from django.shortcuts import redirect
 from django.utils.functional import cached_property
 from django.views.generic.edit import FormMixin
 
-from ..forms import FixedSelect
+from ..forms import FrozenSelect, DateTimePicker
 from ..components import Form
 from ..utils.functools import just, call, swap, throw, \
     pluck, first, select, separate, emptyless, get, omit, pick, map_keys, map_values
@@ -70,7 +72,7 @@ class ModelFormMixin:
         form = self.get_form_class()(**self.get_form_kwargs())
         for field in pluck(self.get_relation_fields(), 'name'):
             form.fields.pop(field)
-        return form
+        return self.prepare_form(form)
 
     def get_relation(self, field, **kw):
         kw = kw or {'fields': self.get_model_fields(field.rel.to)}
@@ -87,6 +89,23 @@ class ModelFormMixin:
                 'get_{0}_relation'.format(field.name),
                 self.get_relation)),
             self.get_relation_fields()))
+
+    def get_overrides(self):
+        return dict({
+            DateField: (DateTimePicker, {
+                'options': {'format': settings.DATE_INPUT_FORMAT}}),
+            DateTimeField: (DateTimePicker, {
+                'options': {'format': settings.DATETIME_INPUT_FORMAT}})
+            }, **getattr(self, 'form_display', {}))
+
+    def prepare_form(self, form):
+        overrides = self.get_overrides()
+        for field in form:
+            match = overrides.get(field.field.__class__, None)
+            if match:
+                Widget, kw = match
+                field.field.widget = Widget(**kw)
+        return form
 
 
 class FormsetsMixin(ModelFormMixin):
@@ -112,7 +131,7 @@ class FormsetsMixin(ModelFormMixin):
                 lambda field: len(self.get_choices(formset_model, field)),
                 kw['matrix']))
             kw = dict({k: max_num for k in ('extra', 'max_num')}, **kw)
-            kw['widgets'] = {f: FixedSelect() for f in kw.pop('matrix', [])}
+            kw['widgets'] = {f: FrozenSelect() for f in kw.pop('matrix', [])}
         if not 'fields' in kw and not 'form' in kw:
             kw['fields'] = self.get_model_fields(formset_model)
         return inlineformset_factory(
