@@ -2,6 +2,7 @@ from itertools import chain
 from django.core.urlresolvers import resolve
 
 from ..utils.functools import call, unpack_args, emptyless, pick
+from ..utils.translation.string import _
 from .library import Component, Tag
 from .markup import MarkedList, Break, Link, Icon, Caption, Column, Panel, Table
 from .forms import Action
@@ -144,6 +145,33 @@ class Paginator(MarkedList):
             self.render_arrow('next', 'right')]
 
 
+class SearchLine(Tag):
+    el = 'input'
+    nobody = True
+
+    def resolve_attrs(self):
+        return {'class': 'form-control', 'id': 'search-line', 'placeholder': _('Search')}
+
+    def DOM(self):
+        return ''.join([
+            super().DOM(),
+            '''
+            <script>
+            $("#search-line").val($.query.get('search'));
+            $("#search-line").keypress(function (e) {
+                if (e.which == 13) {
+                    var value = $(this).val();
+                    if (value) {
+                        window.location.search = $.query.set("search", value);
+                    } else {
+                        window.location.search = $.query.REMOVE("search");
+                    }
+                }
+            })
+            </script>
+            '''])
+
+
 class ChangeList(ObjectsList):
     def render_row(self, row):
         return {'items': chain(
@@ -159,6 +187,9 @@ class ChangeList(ObjectsList):
     def render_actions(self):
         return map(lambda action: self.inject(Action, action), self.props.actions)
 
+    def render_search(self):
+        return '' if not self.props.search else self.inject(SearchLine)
+
     def render_filters(self):
         result = []
         for args in self.props.filters:
@@ -168,7 +199,7 @@ class ChangeList(ObjectsList):
         return result
 
     def render_panel(self):
-        return ''.join(chain(*self.build(('actions', 'filters'))))
+        return ''.join(chain(*self.build(('actions', 'search', 'filters'))))
 
     def DOM(self):
         return ''.join([

@@ -1,8 +1,10 @@
+import operator
+from functools import reduce
 from itertools import chain
 from urllib.parse import urlencode
 
 from django.conf import settings
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models.fields import BooleanField, FieldDoesNotExist
 from django.db.models.fields.related import ManyToOneRel
 from django.shortcuts import redirect
@@ -101,6 +103,7 @@ class AdminView(ListView):
     list_filter = []
     list_counters = []
     list_sort = []
+    list_search = []
     actions = [{
         'icon': 'plus-square',
         'title': _('Add'),
@@ -164,6 +167,14 @@ class AdminView(ListView):
                 qs = qs.order_by(*reduce_dict(
                     lambda k, v: ('-' if v is False else '') + k,
                     states['sort']))
+            if 'search' in self.request.GET:
+                for word in self.request.GET['search'].split():
+                    qs = qs.filter(reduce(
+                        operator.or_, map(
+                        lambda lookup: Q(**{lookup: word}),
+                        map(
+                            lambda f: '__'.join([f, 'icontains']),
+                            self.get_list_view('search')))))
         return qs
 
     def get_list_view(self, op, value=None):
@@ -224,7 +235,8 @@ class AdminView(ListView):
         return dict(
             super().get_context_data(**kw),
             actions=self.get_actions(),
-            filters=self.filters)
+            filters=self.filters,
+            search=bool(len(self.get_list_view('search'))))
 
     def get_redirect_features(self):
         if not self.objects:
