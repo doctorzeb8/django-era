@@ -2,11 +2,10 @@ from functools import reduce
 from itertools import chain
 from urllib.parse import unquote
 
-from django.conf import settings
 from django.core.urlresolvers import resolve, reverse
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import OneToOneField
-from django.forms.fields import DateField, DateTimeField
+from django.forms.fields import DateField, DateTimeField, TimeField
 from django.forms.models import modelform_factory, inlineformset_factory
 from django.http import Http404
 from django.shortcuts import redirect
@@ -93,10 +92,9 @@ class ModelFormMixin:
 
     def get_overrides(self):
         return dict({
-            DateField: (DateTimePicker, {
-                'options': {'format': settings.DATE_INPUT_FORMAT}}),
-            DateTimeField: (DateTimePicker, {
-                'options': {'format': settings.DATETIME_INPUT_FORMAT}})
+            DateField: (DateTimePicker, {'key': 'date'}),
+            DateTimeField: (DateTimePicker, {'key': 'datetime'}),
+            TimeField: (DateTimePicker, {'key': 'time'})
             }, **getattr(self, 'form_display', {}))
 
     def prepare_form(self, form):

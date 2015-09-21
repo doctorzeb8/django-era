@@ -66,10 +66,11 @@ WSGI_APPLICATION = 'app.wsgi.application'
 INDEX_VIEW = 'app.views.IndexView'
 USE_I18N = True
 
-#DATE_FORMAT = 'd.m.Y'
-#DATETIME_FORMAT = 'd.m.Y H:M'
-DATE_INPUT_FORMAT = 'DD.MM.YY'
-DATETIME_INPUT_FORMAT = 'DD.MM.YY HH:mm'
+DATE_FORMAT = 'd.m.y'
+TIME_FORMAT = 'H:M'
+DATETIME_FORMAT = 'd.m.y H:M'
+DATE_INPUT_FORMATS = ['%d.%m.%y']
+DATETIME_INPUT_FORMATS = ['%d.%m.%y %H:%M']
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 TEST_RUNNER = 'era.tests.runner.NoDbDiscoverRunner'

@@ -1,5 +1,6 @@
 import json
 from django import forms
+from django.conf import settings
 from django.templatetags.static import static
 from django.utils import translation
 from .utils.functools import first, avg
@@ -38,16 +39,37 @@ class FrozenSelect(forms.widgets.Select):
             forms.widgets.HiddenInput().render(name, value)])
 
 
-class DateTimePicker(forms.TextInput):
+class DateTimePicker(forms.widgets.DateTimeBaseInput):
     class Media:
         css = {'all': [static(
             'eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css')]}
         js = [static(
             'eonasdan-bootstrap-datetimepicker/build/js/bootstrap-datetimepicker.min.js')]
 
-    def __init__(self, attrs=None, options=None):
-        self.options = options
+    def __init__(self, key='date', attrs=None, options=None):
+        self.options = options or {}
+        self.set_format(key)
         super().__init__(attrs)
+
+    def set_format(self, key):
+        self.format_key = '_'.join([key, 'input_formats']).upper()
+        self.options['format'] = ''.join(map(
+            lambda c: {
+                'j': 'DDD',
+                'd': 'DD',
+                'B': 'MMMM',
+                'b': 'MMM',
+                'm': 'MM',
+                'Y': 'YYYY',
+                'y': 'YY',
+                'H': 'HH',
+                'I': 'hh',
+                'M': 'mm',
+                'S': 'ss',
+                'p': 'a',
+                'z': 'ZZ'} \
+                .get(c, c),
+            getattr(settings, '_'.join([key, 'format']).upper())))
 
     def get_icons(self):
         return {
@@ -60,10 +82,11 @@ class DateTimePicker(forms.TextInput):
 
     def render(self, name, value, attrs):
         return ''.join([
-            super().render(name, value, attrs),
+            super().render(name, value, dict(attrs, readonly='readonly')),
             '<script>$("#{0}").datetimepicker({1});</script>'.format(
                 attrs['id'], json.dumps(dict({
                     'icons': self.get_icons(),
                     'locale': translation.get_language(),
+                    'ignoreReadonly': True,
                     'stepping': 5
                     }, **(self.options or {}))))])
