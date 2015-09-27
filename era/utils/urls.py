@@ -10,6 +10,12 @@ from .functools import unidec
 from .translation import capitalize, get_string, get_model_names
 
 
+def get_site_url(request):
+    return 'http{0}://{1}'.format(
+        's' if request.is_secure() else '',
+        request.get_host())
+
+
 def exists_import(target):
     try:
         return import_module(target)
@@ -28,7 +34,7 @@ def view_url(route, args=None, url_name=None, view_name=None, view_suffix='View'
                     capitalize(view_name or route),
                     view_suffix])]))
         return url(
-            r'^{0}/?$'.format('/'.join(chain([route], args or []))),
+            r'^{0}/?$'.format('/'.join(chain([route], args or [])).lstrip('/')),
             view.as_view(),
             name=(url_name or route))
     return form_url

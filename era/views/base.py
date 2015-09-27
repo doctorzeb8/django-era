@@ -20,6 +20,9 @@ class BaseViewMixin:
     def navigate(self, name):
         return redirect(reverse(name))
 
+    def reload(self):
+        return self.navigate(self.url_match.url_name)
+
 
 class BaseView(BaseViewMixin, TemplateResponseMixin, View):
     components = {}
@@ -45,6 +48,7 @@ class BaseView(BaseViewMixin, TemplateResponseMixin, View):
     def get_context_data(self, **kw):
         return dict(
             getattr(super(), 'get_context_data', lambda **x: x)(**kw),
+            codename=settings.CODENAME,
             page_title=self.get_page_title(**kw),
             media=self.get_media(**kw),
             components=dict(self.components, **self.get_components(**kw)))

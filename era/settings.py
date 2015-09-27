@@ -6,6 +6,39 @@ DEBUG = True
 TEMPLATE_DEBUG = DEBUG
 ALLOWED_HOSTS = []
 
+SECRET_KEY = 'era'
+TEST_RUNNER = 'era.tests.runner.NoDbDiscoverRunner'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(sys.modules.get('app').__file__)), '..')
+CODENAME = os.path.basename(os.path.abspath(BASE_DIR))
+INDEX_VIEW = 'app.views.IndexView'
+MODULES = ['app']
+
+USE_I18N = True
+LOCALE_PATHS = (
+    os.path.join(BASE_DIR, 'locales'),
+    os.path.join(os.path.dirname(django.__file__), 'contrib', 'admin', 'locale')
+)
+
+DATE_FORMAT = 'd.m.y'
+TIME_FORMAT = 'H:M'
+DATETIME_FORMAT = 'd.m.y H:M'
+DATE_INPUT_FORMATS = ['%d.%m.%y']
+DATETIME_INPUT_FORMATS = ['%d.%m.%y %H:%M']
+
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
+MEDIA_URL = '/uploads/'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': CODENAME,
+    }
+}
+
 INSTALLED_APPS = [
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -16,6 +49,7 @@ INSTALLED_APPS = [
     'era'
 ]
 
+BOWER_COMPONENTS_ROOT = BASE_DIR
 BOWER_INSTALLED_APPS = [
     'moment',
     'jquery#2',
@@ -25,10 +59,6 @@ BOWER_INSTALLED_APPS = [
     'eonasdan-bootstrap-datetimepicker',
     'fontawesome',
     'jquery-query-object'
-]
-
-MODULES = [
-    'app'
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -62,34 +92,3 @@ STATICFILES_FINDERS = [
 MESSAGE_STORAGE = 'django.contrib.messages.storage.session.SessionStorage'
 ROOT_URLCONF = 'era.urls'
 WSGI_APPLICATION = 'app.wsgi.application'
-
-INDEX_VIEW = 'app.views.IndexView'
-USE_I18N = True
-
-DATE_FORMAT = 'd.m.y'
-TIME_FORMAT = 'H:M'
-DATETIME_FORMAT = 'd.m.y H:M'
-DATE_INPUT_FORMATS = ['%d.%m.%y']
-DATETIME_INPUT_FORMATS = ['%d.%m.%y %H:%M']
-
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-TEST_RUNNER = 'era.tests.runner.NoDbDiscoverRunner'
-SECRET_KEY = 'era'
-
-BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(sys.modules.get('app').__file__)), '..')
-BOWER_COMPONENTS_ROOT = BASE_DIR
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-STATIC_URL = '/static/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'uploads')
-MEDIA_URL = '/uploads/'
-LOCALE_PATHS = (
-    os.path.join(BASE_DIR, 'locales'),
-    os.path.join(os.path.dirname(django.__file__), 'contrib', 'admin', 'locale')
-)
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': os.path.basename(os.path.abspath(BASE_DIR)),
-    }
-}

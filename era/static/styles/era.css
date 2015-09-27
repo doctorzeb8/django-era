@@ -1,0 +1,28 @@
+/* Common */
+html, body {height: 100%;}
+body, h1, h2, h3, h4, h5, h6 {font-family: Arial;}
+ul {list-style: none; padding: 0px;}
+.caption i.fa {width: 25px;}
+
+/* Helpers */
+.hidden {display: none;}
+.relative {position: relative;}
+.fixed {position: fixed;}
+.stretched {width: 100%;}
+
+/* Forms */
+.form-control {border-radius: 5px;}
+.form-control[readonly] {background-color: inherit; cursor: context-menu;}
+
+/* Lists */
+.list-panel {margin-top: 40px;}
+.list-panel input {margin: 10px 0px;}
+.list-panel button {width: 100%; margin-bottom: 10px;}
+.list-panel i.fa {margin-top: 5px;}
+.pager li span {margin: 10px;}
+
+/* Tables */
+table td {vertical-align: middle !important;}
+table tr {height: 40px;}
+@media (max-width: 768px) {
+    .table-responsive {display: block; width: inherit;}}

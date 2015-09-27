@@ -7,8 +7,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
     <title>{% block title %}{{ page_title }}{% endblock %}</title>
-    {% favicon url='favicon.png' %}
-    {% stylesheet url='fontawesome/css/font-awesome.min.css' %}
+    {% block favicon %}{% favicon url='favicon.png?{{ codename }}' %}{% endblock %}
+
+    {% block icons %}
+        {% stylesheet url='fontawesome/css/font-awesome.min.css' %}
+    {% endblock %}
 
     {% block scripts %}
         {% script url='moment/min/moment-with-locales.min.js' %}
@@ -16,18 +19,24 @@
         {% script url='jquery-query-object/jquery.query-object.js' %}
         {% script url='underscore/underscore-min.js' %}
         {% script url='bootstrap/dist/js/bootstrap.min.js' %}
+    {% endblock %}
+
+    {% block media %}
         <script>var django = {jQuery: $}</script>
         {{ media }}
     {% endblock %}
 
-    {% block head %}
+    {% block bootstrap %}
         {% stylesheet url='bootstrap/dist/css/bootstrap.min.css' %}
     {% endblock %}
+
+    {% stylesheet url='styles/era.css' %}
+    {% block design %}{% endblock %}
 
     <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->   
 </head>
-<body>
+<body class="{{ view.about }}">
     {% block body %}{% endblock %}
 </body>
