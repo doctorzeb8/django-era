@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-era',
-    version='1.0.5',
+    version='1.1.1',
     author='doctorzeb8',
     author_email='doctorzeb8@gmail.com',
     url='https://github.com/doctorzeb8/django-era',
@@ -11,7 +11,7 @@ setup(
     license='MIT',
 
     packages = find_packages(),
-    package_data={'era': ['*.html', '*.js']},
+    package_data={'era': ['*.html', '*.css', '*.js']},
     include_package_data = True,
 
     install_requires=[
