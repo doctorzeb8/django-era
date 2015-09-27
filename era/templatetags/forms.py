@@ -7,7 +7,7 @@ from ..forms import EmptyWidget, DateTimePicker
 from ..utils.functools import call, unpack_args, emptyless, pluck, separate, \
     get, pick, omit, truthful
 from .library import register, Component, Tag
-from .markup import Row, Column, Table, Link, Button, Caption, Panel
+from .markup import Row, Column, Table, Link, Button, Caption, Panel, Icon
 
 
 class WidgetCaseMixin:
@@ -185,6 +185,7 @@ class Form(Tag, FieldsetMixin):
             'novalidate': False,
             'inline': False,
             'panels': False,
+            'spinner': False,
             'title': '',
             'splitters': [],
             'relations': [],
@@ -269,6 +270,19 @@ class Form(Tag, FieldsetMixin):
                 lambda action: self.inject(Action, action),
                 self.props.actions)))
 
+    def render_submit(self):
+        return '' if not self.props.spinner else '''
+        <script>
+            $(function() {
+                $('form[action="%s"]').submit(function(event) {
+                    $(this).find('button[type=submit]').replaceWith('%s');
+                })
+            })
+        </script>''' % (self.props.action, self.inject(Icon, {
+            'name': self.props.spinner,
+            'spin': True,
+            'large': True}))
+
     def get_nodelist(self):
         return ''.join(chain(
             [CsrfTokenNode().render(self.context)],
@@ -276,7 +290,7 @@ class Form(Tag, FieldsetMixin):
                 lambda content: '' if not content else \
                     self.props.inline and content or \
                     self.inject(Row, {}, content),
-                self.build(('fields', 'relations', 'formsets', 'actions')))))
+                self.build(('fields', 'relations', 'formsets', 'actions', 'submit')))))
 
     def resolve_attrs(self):
         return dict(

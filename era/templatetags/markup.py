@@ -147,6 +147,9 @@ class Link(Tag):
             return '?'.join([self.props.url, self.props.qs])
         return self.props.url
 
+    def get_nodelist(self):
+        return self.props.get('nodelist', self.get_url())
+
     def resolve_attrs(self):
         return {
             'target': self.props.newtab and '_blank' or '_self',
@@ -209,12 +212,11 @@ class Well(Tag):
 @register.era
 class Caption(Component):
     def DOM(self):
-        if not 'icon' in self.props:
-            return self.props.title
         return self.inject(
-            Tag, {'el': 'span', 'class': 'caption'}, ''.join([
-                self.inject(Icon, {'name': self.props.icon}),
-                self.inject(Tag, {'el': 'span'}, self.props.title)]))
+            Tag, {'el': 'span', 'class': 'caption'},
+                self.props.title if not 'icon' in self.props else ''.join([
+                    self.inject(Icon, {'name': self.props.icon}),
+                    self.inject(Tag, {'el': 'span'}, self.props.title)]))
 
 
 @register.era
@@ -257,7 +259,7 @@ class Navbar(ComplexComponent):
                             'data-target': '#' + self.props.id}},
                         self.inject(Icon, {'name': 'align-justify'})),
                     self.props.head,
-                    '' if not 'brand' in self.props else self.inject(
+                    '' if not self.props.brand else self.inject(
                         Link,
                         {'url': '/', 'reverse': False, 'class': 'navbar-brand'},
                         self.props.brand)])),

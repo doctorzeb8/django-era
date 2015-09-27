@@ -90,28 +90,31 @@ class Menu(NavigationMixin, Component):
             ''.join(map(self.render_item, self.get_items())))
 
 
-class DropdownMenu(NavigationMixin, Component):
-    def DOM(self):
-        return self.inject(
-            Tag, {'el': 'li', 'class': 'dropdown'}, ''.join([
-                self.inject(
-                    Link,
-                    {
-                        'url': '#',
-                        'reverse': False,
-                        'attrs': {
-                            'class': 'dropdown-toggle',
-                            'data-toggle': 'dropdown'}},
-                    ''.join([
-                        self.props.toggle,
-                        self.inject(
-                            Tag, {'el': 'span', 'class': 'caret'})])),
-                self.inject(
-                    Tag,
-                    {'el': 'ul', 'class': 'dropdown-menu'},
-                    ''.join(map(
-                        lambda i: self.inject(MenuItem, i),
-                        self.props.menu)))]))
+class DropdownMenu(NavigationMixin, Tag):
+    el = 'li'
+
+    def resolve_attrs(self):
+        return {'class': 'dropdown'}
+
+    def get_nodelist(self):
+        return ''.join([
+            self.inject(
+                Link, {
+                    'url': self.props.toggle.get('url', '#'),
+                    'reverse': False,
+                    'attrs': {
+                        'class': 'dropdown-toggle',
+                        'data-toggle': 'dropdown'}},
+                ''.join([
+                    self.inject(Caption, self.props.toggle['caption']),
+                    '' if not self.props.menu else self.inject(
+                        Tag, {'el': 'span', 'class': 'caret'})])),
+            '' if not self.props.menu else self.inject(
+                Tag,
+                {'el': 'ul', 'class': 'dropdown-menu'},
+                ''.join(map(
+                    lambda i: self.inject(MenuItem, i),
+                    self.props.menu)))])
 
 
 @register.era
