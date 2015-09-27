@@ -15,7 +15,7 @@ from django.views.generic.edit import FormMixin
 from ..forms import FrozenSelect, DateTimePicker
 from ..components import Form
 from ..utils.functools import just, call, swap, throw, \
-    pluck, first, select, separate, emptyless, get, omit, pick, map_keys, map_values
+    pluck, first, select, separate, factual, case, omit, pick, map_keys, map_values
 from ..utils.translation import _, inflect, get_string, get_model_names
 from .base import BaseView
 
@@ -34,7 +34,7 @@ class ModelFormMixin:
         return call(getattr(self, 'get_instance', lambda: None))
 
     def get_model_name(self, key='single', fn=get_string, model=None):
-        return get(key, dict(
+        return case(key, dict(
             zip(('single', 'plural'),
             map(fn, get_model_names(model or self.model)))))
 
@@ -51,7 +51,7 @@ class ModelFormMixin:
     def get_relation_fields(self):
         return [] if not self.model else filter(
             lambda field: isinstance(field, OneToOneField),
-            emptyless(map(
+            factual(map(
                 lambda field: field in self.model._meta.get_all_field_names() \
                     and self.model._meta.get_field(field) or None,
                 self.get_fields())))
@@ -83,7 +83,7 @@ class ModelFormMixin:
         return {'field': field, 'form': form}
 
     def get_relations(self):
-        return emptyless(map(
+        return factual(map(
             lambda field: swap(field, getattr(
                 self,
                 'get_{0}_relation'.format(field.name),

@@ -4,8 +4,8 @@ from django.forms.widgets import TextInput, Textarea, CheckboxInput
 from django.template.defaulttags import CsrfTokenNode
 
 from ..forms import EmptyWidget, DateTimePicker
-from ..utils.functools import call, unpack_args, emptyless, pluck, separate, \
-    get, pick, omit, truthful
+from ..utils.functools import call, unpack_args, factual, pluck, separate, \
+    case, pick, omit, truthful
 from .library import register, Component, Tag
 from .markup import Row, Column, Table, Link, Button, Caption, Panel, Icon
 
@@ -69,9 +69,9 @@ class Group(Tag):
         return {'valid': None, 'inline': False}
 
     def resolve_attrs(self):
-        return {'class': ' '.join(emptyless([
+        return {'class': ' '.join(factual([
             'form-group',
-            get(self.is_valid, {
+            case(self.is_valid, {
                 True: 'has-success',
                 False: 'has-error', None: ''})]))}
 
@@ -133,7 +133,7 @@ class Formset(Table, FieldsetMixin):
         return (0, -1 if self.props.formset.can_delete and not have_instances else None)
 
     def get_thead_items(self):
-        return emptyless(map(
+        return factual(map(
             lambda f: not f.is_hidden and f.label,
             self.props.formset.forms[0]))
 
@@ -193,7 +193,7 @@ class Form(Tag, FieldsetMixin):
 
     def get_context_prop(self, prop, default=None):
         return self.context.get(
-            '_'.join(emptyless([self.props.prefix, prop])),
+            '_'.join(factual([self.props.prefix, prop])),
             default)
 
     def resolve_enctype(self):

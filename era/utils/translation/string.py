@@ -2,11 +2,11 @@ import re
 import sys
 from django.utils.text import capfirst
 from django.utils.translation import get_language, ugettext_lazy
-from ..functools import emptyless
+from ..functools import factual
 
 
 def _(string, context=None):
-    t = ugettext_lazy(': '.join(emptyless([context, string])))
+    t = ugettext_lazy(': '.join(factual([context, string])))
     t.string = string
     return t
 

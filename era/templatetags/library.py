@@ -8,7 +8,7 @@ from classytags.core import Tag as ClassyTag
 from django.template import Library, TemplateSyntaxError
 
 from ..utils.functools import call, unpack_args, reduce_dict, map_values, \
-    truthful, emptyless, pick, omit
+    truthful, factual, pick, omit
 from ..utils.translation import normalize
 
 
@@ -106,9 +106,9 @@ class Component(ClassyTag):
         return {}
 
     def get_class_set(self, *args, prefix='', include=''):
-        return ' '.join(emptyless(
+        return ' '.join(factual(
             chain([include], map(
-                lambda k: '-'.join(emptyless([prefix, k])),
+                lambda k: '-'.join(factual([prefix, k])),
                 truthful(pick(self.props, *args)).keys()))))
 
     def resolve_props(self):
@@ -186,7 +186,7 @@ class Tag(ComplexComponent):
         if 'id' in self.props:
             attrs['id'] = self.props.id
         if 'class' in self.props:
-            attrs['class'] = ' '.join(emptyless([
+            attrs['class'] = ' '.join(factual([
                 attrs.get('class', ''),
                 self.props['class']]))
         return {

@@ -54,7 +54,7 @@ def first(seq):
 def select(i, l):
     return l[i - len(l) * int(i / len(l))]
 
-def emptyless(l):
+def factual(l):
     return list(filter(bool, l))
 
 def separate(fn, lx):
@@ -66,7 +66,7 @@ def separate(fn, lx):
         enumerate(tee(lx, 2))))
 
 
-def get(k, *dl, **kw):
+def case(k, *dl, **kw):
     return dict(len(dl) and dl[0] or {}, **kw).get(k)
 
 @unidec

@@ -2,7 +2,7 @@ from itertools import chain
 from django.core.urlresolvers import reverse
 from django.utils.text import capfirst
 
-from ..utils.functools import just, call, emptyless, reduce_dict, omit, pick, truthful
+from ..utils.functools import just, call, factual, reduce_dict, omit, pick, truthful
 from .library import register, Import, Component, ComplexComponent, Tag
 
 
@@ -204,7 +204,7 @@ class Alert(Tag):
 class Well(Tag):
     def resolve_attrs(self):
         return {
-            'class': ' '.join(emptyless([
+            'class': ' '.join(factual([
                 'well', 
                 '' if not 'size' in self.props else 'well-' + self.props.size]))}
 

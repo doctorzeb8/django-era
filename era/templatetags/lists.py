@@ -2,7 +2,7 @@ from itertools import chain
 from urllib.parse import quote
 from django.core.urlresolvers import resolve
 
-from ..utils.functools import call, unpack_args, emptyless, pick
+from ..utils.functools import call, unpack_args, factual, pick
 from ..utils.translation.string import _
 from .library import Component, Tag
 from .markup import MarkedList, Break, Link, Icon, Caption, Column, Panel, Table
@@ -47,7 +47,7 @@ class QuerySetKey(Link):
     def resolve_props(self):
         return {
             'reverse': False,
-            'argument': '-'.join(emptyless([self.props.method, self.props.key]))}
+            'argument': '-'.join(factual([self.props.method, self.props.key]))}
 
     def resolve_attrs(self):
         if (self.props.value is None and not self.props.argument in self.request.GET) \

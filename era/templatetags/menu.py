@@ -4,7 +4,7 @@ from django.apps import apps
 from django.core.urlresolvers import resolve
 from django.utils.text import capfirst
 
-from ..utils.functools import emptyless, pick, omit
+from ..utils.functools import factual, pick, omit
 from ..utils.translation import get_string, get_model_names
 from ..utils.urls import exists_import
 from .library import register, Component, ComplexComponent, Tag
@@ -128,11 +128,11 @@ class MainMenu(Menu):
     def get_items(self):
         return list(chain(*map(
             self.get_app_menu_items,
-            emptyless(map(
+            factual(map(
                 lambda module: getattr(
                     module,
                     ''.join([capfirst(module.__package__), 'Menu']),
                     None),
-                emptyless(map(
+                factual(map(
                     lambda app: exists_import('.'.join([app, 'components'])),
                     settings.MODULES)))))))

@@ -1,4 +1,4 @@
-from ..functools import get
+from ..functools import case
 
 
 def get_model_names(model):
@@ -8,7 +8,7 @@ def verbose_choices(*args):
     return map(lambda a: (a.string, a), args)
 
 def verbose_choice(obj, f):
-    return get(
+    return case(
         getattr(obj, f),
         dict(obj._meta.get_field(f).choices))
 
