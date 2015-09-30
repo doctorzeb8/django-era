@@ -104,6 +104,7 @@ class AdminView(ListView):
     list_counters = []
     list_sort = []
     list_search = []
+    default_filters = {}
     actions = [{
         'icon': 'plus-square',
         'title': _('Add'),
@@ -245,10 +246,13 @@ class AdminView(ListView):
                 'add']))
         if self.list_filter and not self.request.GET:
             kw = {}
+            state = lambda key: '-'.join(['filter', key])
             for (title, key, choices, counters) in self.filters:
                 choices = list(map(first, choices))
                 if len(choices) == 1:
-                    kw['-'.join(['filter', key])] = choices[0]
+                    kw[state(key)] = choices[0]
+                elif key in self.default_filters:
+                    kw[state(key)] = self.default_filters[key]
             if kw:
                 return redirect('?'.join([self.request.path, urlencode(kw)]))
 
