@@ -5,8 +5,9 @@ from urllib.parse import unquote
 from django.core.urlresolvers import resolve, reverse
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import OneToOneField
+from django.forms import Form as EmptyForm
 from django.forms.fields import DateField, DateTimeField, TimeField
-from django.forms.models import modelform_factory, inlineformset_factory
+from django.forms.models import modelform_factory, modelformset_factory, inlineformset_factory
 from django.http import Http404
 from django.shortcuts import redirect
 from django.utils.functional import cached_property
@@ -21,6 +22,8 @@ from .base import BaseView
 
 
 class ModelFormMixin:
+    empty_form = False
+
     @cached_property
     def model(self):
         return getattr(
@@ -57,8 +60,12 @@ class ModelFormMixin:
                 self.get_fields())))
 
     def get_form_class(self):
-        return self.form_class or modelform_factory(
-            self.model, fields=self.get_fields())
+        if self.form_class:
+            return self.form_class
+        elif self.empty_form:
+            return EmptyForm
+        else:
+            return modelform_factory(self.model, fields=self.get_fields())
 
     def get_form_data(self, **kw):
         result = pick(kw, 'prefix', 'initial', 'instance')
@@ -66,6 +73,8 @@ class ModelFormMixin:
             result['data'] = self.request.POST
         if self.request.FILES:
             result['files'] = self.request.FILES
+        if self.empty_form:
+            return omit(result, 'instance')
         return result
 
     def get_form(self):
@@ -98,12 +107,13 @@ class ModelFormMixin:
             }, **getattr(self, 'form_display', {}))
 
     def prepare_form(self, form):
-        overrides = self.get_overrides()
-        for field in form:
-            match = overrides.get(field.field.__class__, None)
-            if match:
-                Widget, kw = match
-                field.field.widget = Widget(**kw)
+        if not self.empty_form:
+            overrides = self.get_overrides()
+            for field in form:
+                match = overrides.get(field.field.__class__, None)
+                if match:
+                    Widget, kw = match
+                    field.field.widget = Widget(**kw)
         return form
 
 
@@ -111,18 +121,24 @@ class FormsetsMixin(ModelFormMixin):
     def get_formsets(self):
         return []
 
-    def fill_matrix(self, factory, fields):
+    def get_matrix_queryset(self, factory):
+        if hasattr(factory, 'fk'):
+            return factory.model.objects.filter(**{factory.fk.name: self.instance})
+        else:
+            return factory.model.objects.all()
+
+    def fill_matrix(self, factory, prefix, fields):
+        get_qs = getattr(self, 'get_{0}_queryset'.format(prefix), self.get_matrix_queryset)
         choices = dict(map(
             lambda field: (field, list(filter(
                 lambda choice: not choice in list(map(
                     lambda instance: getattr(instance, field),
-                    factory.model.objects.filter(
-                        **{factory.fk.name: self.instance}))),
+                    get_qs(factory))),
                 map(first, self.get_choices(factory.model, field))))),
             fields))
         return list(map(
             lambda i: map_values(lambda c: select(i, c), choices),
-            range(0, factory.extra)))
+            range(1, factory.extra)))
 
     def get_formset_factory(self, formset_model, **kw):
         if 'matrix' in kw:
@@ -133,20 +149,21 @@ class FormsetsMixin(ModelFormMixin):
             kw['widgets'] = {f: FrozenSelect() for f in kw.pop('matrix', [])}
         if not 'fields' in kw and not 'form' in kw:
             kw['fields'] = self.get_model_fields(formset_model)
-        return inlineformset_factory(
-            kw.pop('model', self.model), formset_model, **kw)
+        if not 'constructor' in kw:
+            kw['parent_model'] = kw.pop('model', self.model)
+        return kw.pop('constructor', inlineformset_factory)(model=formset_model, **kw)
 
     def get_formset_data(self, factory, **kw):
         result = self.get_form_data(instance=self.instance, **kw)
         if 'matrix' in kw:
-            result['initial'] = self.fill_matrix(factory, kw['matrix'])
+            result['initial'] = self.fill_matrix(factory, kw['prefix'], kw['matrix'])
         return result
 
     def inline_formset(self, formset_model, **kw):
         factory = self.get_formset_factory(formset_model, **kw.copy())
         prefix = self.get_model_name('plural', model=factory.model)
         get_data = getattr(self, 'get_{0}_formset_data'.format(prefix), self.get_formset_data)
-        formset = factory(**get_data(factory, **dict(kw, prefix=prefix)))
+        formset = factory(**get_data(factory, **dict(omit(kw, 'constructor'), prefix=prefix)))
 
         if formset.can_delete and formset.validate_min:
             for form in formset.forms[:formset.min_num]:
@@ -192,7 +209,7 @@ class FormView(BaseView, FormsetsMixin, FormMixin):
 
     def get_media(self, **kw):
         return reduce(
-            lambda x, y: x + y,
+            lambda x, y: x and (x + y) or y,
             pluck(self.get_all_forms(**kw), 'media'))
 
     def get_actions(self):
@@ -263,6 +280,22 @@ class FormView(BaseView, FormsetsMixin, FormMixin):
 
     def post(self, request, *args, **kw):
         return self.process(**self.get_members())
+
+
+class MatrixView(FormView):
+    empty_form = True
+
+    def get_formsets(self):
+        return list(map(
+            lambda matrix: self.inline_formset(
+                matrix[0],
+                constructor=modelformset_factory,
+                matrix=matrix[1:]),
+            self.models))
+
+    def save_formsets(self, form, *formsets):
+        for formset in formsets:
+            formset.save()
 
 
 class ObjectView(FormView):
