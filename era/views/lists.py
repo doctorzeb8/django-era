@@ -202,7 +202,7 @@ class AdminView(ListView):
         if not hasattr(self, storage):
             if isinstance(field, BooleanField):
                 result = self.get_generic_filter(
-                    name, [(True, _('Yes')), (False, _('No'))])
+                    name, [(True, _('Yes').lower()), (False, _('No').lower())])
             elif field.is_relation:
                 result = self.get_generic_filter(
                     name + '__pk', map(

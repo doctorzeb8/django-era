@@ -16,6 +16,11 @@ register = Library()
 register.era = lambda cls: register.tag(normalize(cls.__name__), cls)
 
 
+@register.filter
+def get(d, k):
+    return d.get(k)
+
+
 @register.era
 class Import(ClassyTag):
     def __init__(self, parser, tokens):

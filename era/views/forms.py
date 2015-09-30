@@ -246,7 +246,7 @@ class FormView(BaseView, FormsetsMixin, FormMixin):
             self.get_all_forms(**kw), 'non_field_errors')))
         for message in errors:
             self.send_message('error', message)
-        return self.render_to_response(self.get_context_data(**kw))
+        return self.render_to_response(self.get_context_data(**kw), status=400)
 
     def check_is_valid(self, **kw):
         return all(map(lambda x: x.is_valid(), self.get_all_forms(**kw)))
