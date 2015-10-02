@@ -173,6 +173,7 @@ class FormsetsMixin(ModelFormMixin):
 
 class FormView(BaseView, FormsetsMixin, FormMixin):
     use_prefix = False
+    long_term = False
     components = {'content': Form}
     form_props = {}
     success_redirect = 'index'
@@ -216,7 +217,11 @@ class FormView(BaseView, FormsetsMixin, FormMixin):
         return self.actions
 
     def get_form_props(self):
-        return dict(self.form_props, actions=self.get_actions())
+        result = self.form_props
+        result['actions'] = self.get_actions()
+        if self.check_is_long():
+            result['spinner'] = 'spinner'
+        return result
 
     def get_context_data(self, **kw):
         members = kw or self.get_members()
@@ -264,6 +269,9 @@ class FormView(BaseView, FormsetsMixin, FormMixin):
         for message in errors:
             self.send_message('error', message)
         return self.render_to_response(self.get_context_data(**kw), status=400)
+
+    def check_is_long(self):
+        return self.long_term
 
     def check_is_valid(self, **kw):
         return all(map(lambda x: x.is_valid(), self.get_all_forms(**kw)))
