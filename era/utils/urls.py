@@ -10,10 +10,11 @@ from .functools import unidec
 from .translation import capitalize, get_string, get_model_names
 
 
-def get_site_url(request):
-    return 'http{0}://{1}'.format(
+def get_site_url(request, trail=False):
+    return 'http{0}://{1}{2}'.format(
         's' if request.is_secure() else '',
-        request.get_host())
+        request.get_host(),
+        '/' if trail else '')
 
 
 def exists_import(target):

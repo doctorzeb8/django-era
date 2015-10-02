@@ -1,4 +1,4 @@
-from .templatetags.library import register, Component, Tag
+from .templatetags.library import register, Component, TemplateComponent, Tag
 from .templatetags.markup import Icon, MarkedList, IconicList, Break, ProgressBar, \
     Row, Container, Column, Link, Button, Label, Alert, Well, Caption, Panel, Navbar, Table
 from era.templatetags.media import Script, Stylesheet, Image, Messages

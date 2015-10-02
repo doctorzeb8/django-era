@@ -6,11 +6,12 @@ from classytags.arguments import MultiKeywordArgument
 from classytags.core import Options
 from classytags.core import Tag as ClassyTag
 from django.template import Library, TemplateSyntaxError
+from django.template.loader import render_to_string
 
 from ..utils.functools import call, unpack_args, reduce_dict, map_values, \
     truthful, factual, pick, omit
 from ..utils.translation import normalize
-
+from ..utils.urls import get_site_url
 
 register = Library()
 register.era = lambda cls: register.tag(normalize(cls.__name__), cls)
@@ -33,6 +34,9 @@ class Import(ClassyTag):
                 parser.tags.update(import_module(path).register.tags)
             except ImportError:
                 raise TemplateSyntaxError('can not import {0}'.format(path))
+
+    def render(self, *args, **kw):
+        return ''
 
 
 class HTMLTag:
@@ -107,6 +111,9 @@ class Component(ClassyTag):
     def build(self, args, prefix='render'):
         return map(lambda arg: call(getattr(self, '_'.join([prefix, arg]))), args)
 
+    def get_host(self, *args, **kw):
+        return get_site_url(self.request, *args, **kw)
+
     def get_defaults(self):
         return {}
 
@@ -147,14 +154,6 @@ class Component(ClassyTag):
             self.dom.add_class(self.props['class'])
 
 
-@register.era
-class Inject(Component):
-    def DOM(self):
-        return '' if not self.props.component else self.inject(
-            lambda: self.props.component,
-            omit(self.props, 'component'))
-
-
 class ComplexComponent(Component):
     parts = []
 
@@ -170,6 +169,21 @@ class ComplexComponent(Component):
             [(
                 'end-' + normalize(self.__class__.__name__),
                 not self.parts and 'nodelist' or self.parts[-1])])}))
+
+
+class TemplateComponent(Component):
+    template = 'index.html'
+
+    def render_dom(self):
+        return render_to_string(self.template, dict(self.context, **self.props))
+
+
+@register.era
+class Inject(Component):
+    def DOM(self):
+        return '' if not self.props.component else self.inject(
+            lambda: self.props.component,
+            omit(self.props, 'component'))
 
 
 @register.era

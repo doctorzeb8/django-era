@@ -1,6 +1,7 @@
 from itertools import chain
 from django.core.urlresolvers import reverse
 from django.utils.text import capfirst
+from urllib.parse import urlencode
 
 from ..utils.functools import just, call, factual, reduce_dict, omit, pick, truthful
 from .library import register, Import, Component, ComplexComponent, Tag
@@ -125,8 +126,10 @@ class Link(Tag):
 
     def get_defaults(self):
         return {
+            'nodelist': '',
             'newtab': False,
             'reverse': True,
+            'host': False,
             'url': 'index',
             'args': [],
             'kwargs': {},
@@ -143,18 +146,20 @@ class Link(Tag):
         return {}
 
     def get_url(self):
-        if self.props.qs:
-            return '?'.join([self.props.url, self.props.qs])
-        return self.props.url
+        return ''.join(factual([
+            self.props.host and self.get_host(),
+            (self.props.reverse and reverse or just)(
+                self.props.url,
+                **pick(self.props, 'args', 'kwargs')),
+            self.props.qs and '?' + urlencode(self.props.qs)]))
 
     def get_nodelist(self):
-        return self.props.get('nodelist', self.get_url())
+        return self.props['nodelist'] or self.get_url()
 
     def resolve_attrs(self):
         return {
             'target': self.props.newtab and '_blank' or '_self',
-            'href': (self.props.reverse and reverse or just)(
-                self.get_url(), **pick(self.props, 'args', 'kwargs'))}
+            'href': self.get_url()}
 
 
 @register.era

@@ -2,7 +2,7 @@ from itertools import chain, groupby
 from django.templatetags.static import static
 from django.utils.text import capfirst
 
-from ..utils.functools import just
+from ..utils.functools import just, factual
 from .library import register, Component, Tag
 from .markup import Alert
 
@@ -12,10 +12,12 @@ class Include(Tag):
     nobody = True
 
     def get_defaults(self):
-        return {'static': True}
+        return {'static': True, 'host': False}
 
     def get_url(self):
-        return (self.props.static and static or just)(self.props.url)
+        return ''.join(factual([
+            self.props.host and self.get_host(),
+            (self.props.static and static or just)(self.props.url)]))
 
     def resolve_attrs(self):
         return {'rel': self.rel, 'href': self.get_url()}

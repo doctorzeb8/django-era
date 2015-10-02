@@ -1,5 +1,4 @@
 from itertools import chain
-from urllib.parse import quote
 from django.core.urlresolvers import resolve
 
 from ..utils.functools import call, unpack_args, factual, pick
@@ -175,7 +174,7 @@ class SearchLine(Tag):
 
 class ChangeList(ObjectsList):
     def get_location_qs(self):
-        return '='.join(['next', quote(self.request.get_full_path())])
+        return {'next': self.request.get_full_path()}
 
     def render_row(self, row):
         return {'items': chain(
