@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width,initial-scale=1">
 
     <title>{% block title %}{{ page_title }}{% endblock %}</title>
-    {% block favicon %}{% favicon url='favicon.png?{{ codename }}' %}{% endblock %}
+    {% block favicon %}{% favicon url='favicon.png?'|add:codename %}{% endblock %}
 
     {% block icons %}
         {% stylesheet url='fontawesome/css/font-awesome.min.css' %}
