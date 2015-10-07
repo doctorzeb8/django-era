@@ -1,6 +1,6 @@
 /* Common */
 html, body {height: 100%;}
-body, h1, h2, h3, h4, h5, h6 {font-family: Arial;}
+body {font-family: Arial;}
 ul {list-style: none; padding: 0px;}
 .caption i.fa {width: 25px;}
 
