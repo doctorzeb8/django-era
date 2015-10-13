@@ -8,11 +8,12 @@ from .library import register, Import, Component, ComplexComponent, Tag
 
 
 @register.era
-class Icon(Component):
-    def DOM(self):
-        return self.inject(
-            Tag,
-            {'el': 'i', 'class': ' '.join(chain(
+class Icon(Tag):
+    el = 'i'
+
+    def resolve_attrs(self):
+        return {
+            'class': ' '.join(chain(
                 ['fa', 'fa-' + self.props.name],
                 map(
                     lambda z: 'fa-' + z[0].format(self.props.pop(z[1])),
@@ -20,7 +21,7 @@ class Icon(Component):
                         lambda z: z[1] in self.props,
                         zip(
                             ('{0}x', 'li', 'lg', 'fw', 'spin', 'rotate-{0}'),
-                            ('size', 'list', 'large', 'fixed', 'spin', 'rotate'))))))})
+                            ('size', 'list', 'large', 'fixed', 'spin', 'rotate'))))))}
 
 
 class MarkedList(Tag):
@@ -31,7 +32,7 @@ class MarkedList(Tag):
 
     def get_nodelist(self):
         return ''.join(map(
-            lambda item: '<li>{0}</li>'.format(item),
+            lambda item: self.inject(Tag, {'el': 'li'}, item),
             self.get_items()))
 
 
@@ -74,31 +75,33 @@ class Break(Component):
 
 
 @register.era
-class ProgressBar(Component):
+class ProgressBar(Tag):
     def get_defaults(self):
         return {'level': 'success'}
 
     def resolve_props(self):
-        return {'value': str(int(self.props.value))}
+        return {
+            'class': 'progress',
+            'value': str(int(self.props.value))}
 
     def DOM(self):
         return self.inject(
-            Tag, {'class': 'progress'}, self.inject(
-                Tag,
-                {'attrs': {
-                    'class': 'progress-bar progress-bar-' + self.props.level,
-                    'style': 'width: {0}%;'.format(self.props.value)}},
-                self.props.value + '%'))
+            Tag,
+            {'attrs': {
+                'class': 'progress-bar-' + self.props.level,
+                'style': 'width: {0}%;'.format(self.props.value)}},
+            self.props.value + '%')
 
 
 @register.era
 class Row(Tag):
-    def resolve_attrs(self):
-        return {'class': 'row'}
+    pass
 
 
 @register.era
 class Container(Tag):
+    named = False
+
     def get_defaults(self):
         return {'fluid': False}
 
@@ -123,6 +126,7 @@ class Column(Tag):
 @register.era
 class Link(Tag):
     el = 'a'
+    named = False
 
     def get_defaults(self):
         return {
@@ -165,6 +169,7 @@ class Link(Tag):
 @register.era
 class Button(Tag):
     el = 'button'
+    named = False
 
     def get_defaults(self):
         return {'level': 'primary', 'type': 'button', 'name': 'button'}
@@ -183,7 +188,7 @@ class Label(Tag):
         return {'level': 'default'}
 
     def resolve_attrs(self):
-        return {'class': 'label label-' + self.props.level}
+        return {'class': 'label-' + self.props.level}
 
 
 @register.era
@@ -192,7 +197,7 @@ class Alert(Tag):
         return {'level': 'primary', 'dismiss': True}
 
     def resolve_attrs(self):
-        return {'class': 'alert alert-' + self.props.level}
+        return {'class': 'alert-' + self.props.level}
 
     def tweak(self):
         super().tweak()
@@ -208,49 +213,55 @@ class Alert(Tag):
 @register.era
 class Well(Tag):
     def resolve_attrs(self):
-        return {
-            'class': ' '.join(factual([
-                'well', 
-                '' if not 'size' in self.props else 'well-' + self.props.size]))}
+        if 'size' in self.props:
+            return {'class': 'well-' + self.props.size}
+        return {}
 
 
 @register.era
-class Caption(Component):
-    def DOM(self):
-        return self.inject(
-            Tag, {'el': 'span', 'class': 'caption'},
-                self.props.title if not 'icon' in self.props else ''.join([
-                    self.inject(Icon, {'name': self.props.icon}),
-                    self.inject(Tag, {'el': 'span'}, self.props.title)]))
+class Caption(Tag):
+    el = 'span'
+
+    def get_nodelist(self):
+        if not 'icon' in self.props:
+            return self.props.title
+        return ''.join([
+            self.inject(Icon, {'name': self.props.icon}),
+            self.inject(Tag, {'el': 'span'}, self.props.get(
+                'title', self.props.nodelist))])
 
 
 @register.era
-class Panel(ComplexComponent):
+class Panel(Tag):
     parts = ['title', 'body']
 
     def get_defaults(self):
         return {'level': 'default', 'title': False}
 
-    def DOM(self):
-        return self.inject(
-            Tag,
-            {'class': 'panel panel-' + self.props.level},
-            ''.join([
-                '' if not self.props.title else self.inject(
-                    Tag, {'class': 'panel-heading'}, self.inject(
-                        Tag, {'name': 'h3'}, self.props.title)),
-                self.inject(
-                    Tag, {'class': 'panel-body'}, self.props.body)]))
+    def resolve_attrs(self):
+        return {'class': 'panel-' + self.props.level}
+
+    def get_nodelist(self):
+        return ''.join([
+            '' if not self.props.title else self.inject(
+                Tag, {'class': 'panel-heading'}, self.inject(
+                    Tag, {'name': 'h3'}, self.props.title)),
+            self.inject(
+                Tag, {'class': 'panel-body'}, self.props.body)])
 
 
 @register.era
-class Navbar(ComplexComponent):
+class Navbar(Tag):
+    el = 'nav'
     parts = ['head', 'brand', 'collapse']
 
     def get_defaults(self):
-        return {'id': 'default', 'container': False}
+        return {'key': 'default', 'container': False}
 
-    def DOM(self):
+    def resolve_attrs(self):
+        return {'class': 'navbar-default'}
+
+    def get_nodelist(self):
         nodelist = ''.join([
             self.inject(
                 Tag,
@@ -261,7 +272,7 @@ class Navbar(ComplexComponent):
                         {'el': 'button', 'attrs': {
                             'class': 'navbar-toggle collapsed',
                             'data-toggle': 'collapse',
-                            'data-target': '#' + self.props.id}},
+                            'data-target': '#' + self.props.key}},
                         self.inject(Icon, {'name': 'align-justify'})),
                     self.props.head,
                     '' if not self.props.brand else self.inject(
@@ -270,17 +281,16 @@ class Navbar(ComplexComponent):
                         self.props.brand)])),
             self.inject(
                 Tag,
-                {'attrs': {'id': self.props.id, 'class': 'navbar-collapse collapse'}},
+                {'attrs': {'id': self.props.key, 'class': 'navbar-collapse collapse'}},
                 self.props.collapse)])
-
-        return self.inject(
-            Tag,
-            {'el': 'nav', 'class': 'navbar navbar-default'},
-            nodelist if not self.props.container else self.inject(
-                Container, {'fluid': self.props.container == 'fluid'}, nodelist))
+        return nodelist if not self.props.container else self.inject(
+            Container, {'fluid': self.props.container == 'fluid'}, nodelist)
 
 
-class Table(Component):
+class Table(Tag):
+    el = 'table'
+    named = False
+
     def slice(self, seq):
         return list(seq)[slice(*call(
             getattr(self, 'get_slice', lambda: (None, None))))]
@@ -319,25 +329,24 @@ class Table(Component):
                     self.slice(row['items'])))),
             items))
 
-    def DOM(self):
-        return self.inject(
-            Tag,
-            {'el': 'table', 'class': self.get_class_set(
+    def resolve_attrs(self):
+        return {
+            'class': self.get_class_set(
                 'striped',
                 'bordered',
                 'hover',
                 'condensed',
                 'responsive',
                 prefix='table',
-                include='table')},
-            ''.join([
-                    self.inject(
-                        Tag,
-                        {'el': 'thead'},
-                        self.render_items(
-                            [{'items': self.get_thead_items()}],
-                            cell='th')),
-                    self.inject(
-                        Tag,
-                        {'el': 'tbody'},
-                        self.render_items(self.get_tbody_items()))]))
+                include='table')}
+
+    def get_nodelist(self):
+        return ''.join([
+            self.inject(
+                Tag,
+                {'el': 'thead'},
+                self.render_items([{'items': self.get_thead_items()}], cell='th')),
+            self.inject(
+                Tag,
+                {'el': 'tbody'},
+                self.render_items(self.get_tbody_items()))])

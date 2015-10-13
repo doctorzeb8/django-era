@@ -1,7 +1,6 @@
 from itertools import chain
 from django.conf import settings
 from django.apps import apps
-from django.core.urlresolvers import resolve
 from django.utils.text import capfirst
 
 from ..utils.functools import factual, pick, omit
@@ -11,12 +10,7 @@ from .library import register, Component, ComplexComponent, Tag
 from .markup import Link, Caption
 
 
-class NavigationMixin:
-    def check_active(self, *args):
-        return resolve(self.request.path).url_name in args
-
-
-class MenuItem(NavigationMixin, Tag):
+class MenuItem(Tag):
     el = 'li'
 
     def get_defaults(self):
@@ -69,32 +63,32 @@ class MenuItem(NavigationMixin, Tag):
         super().tweak()
 
 
-class Menu(NavigationMixin, Component):
+class Menu(Tag):
+    el = 'ul'
+    inline = True
+
     def get_items(self):
         return self.props.items
-
-    def get_defaults(self):
-        return {'pills': False, 'tabs': False, 'stacked': False}
 
     def render_item(self, item):
         if isinstance(item, list):
             return self.inject(
-                DropdownMenu, {'toggle': item[0], 'menu': item[1:]})
+                Dropdown, {'toggle': item[0], 'menu': item[1:]})
         return self.inject(MenuItem, item)
 
-    def DOM(self):
-        return self.inject(
-            Tag,
-            {'el': 'ul', 'class': self.get_class_set(
-                'pills', 'tabs', 'stacked', prefix='nav', include='nav')},
-            ''.join(map(self.render_item, self.get_items())))
-
-
-class DropdownMenu(NavigationMixin, Tag):
-    el = 'li'
+    def get_defaults(self):
+        return {'pills': False, 'tabs': False, 'stacked': False}
 
     def resolve_attrs(self):
-        return {'class': 'dropdown'}
+        return {'class': self.get_class_set(
+            'pills', 'tabs', 'stacked', prefix='nav', include='nav')}
+
+    def get_nodelist(self):
+        return ''.join(map(self.render_item, self.get_items()))
+
+
+class Dropdown(Tag):
+    el = 'li'
 
     def get_nodelist(self):
         return ''.join([

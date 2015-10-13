@@ -3,6 +3,7 @@ from itertools import chain
 from functools import reduce
 
 from django.conf.urls import url, patterns
+from django.core.urlresolvers import resolve
 from django.shortcuts import render
 from django.utils.module_loading import import_string
 

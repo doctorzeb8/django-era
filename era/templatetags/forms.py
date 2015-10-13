@@ -46,6 +46,7 @@ class Input(WidgetCaseMixin, RequiredAttrMixin, Component):
 
 class Label(RequiredAttrMixin, Tag):
     el = 'label'
+    named = False
 
     def resolve_attrs(self):
         return {
@@ -61,6 +62,8 @@ class Label(RequiredAttrMixin, Tag):
 
 
 class Group(Tag):
+    named = False
+
     @property
     def is_valid(self):
         return self.props.valid
@@ -152,7 +155,7 @@ class Formset(Table, FieldsetMixin):
             self.props.formset.forms)
 
 
-class Action(Component):
+class Action(Tag):
     def get_button_props(self):
         if not pick(self.props, 'link', 'onclick'):
             return dict({'type': 'submit'}, **pick(self.props, 'level'))
@@ -163,7 +166,7 @@ class Action(Component):
             return {'url': self.props.link}
         return self.props.link
 
-    def DOM(self):
+    def get_nodelist(self):
         result = self.inject(
             Button, self.get_button_props(), self.inject(
                 Caption, pick(self.props, 'icon', 'title')))
@@ -176,6 +179,7 @@ class Action(Component):
 class Form(Tag, FieldsetMixin):
     el = 'form'
     inline = True
+    named = False
 
     def get_defaults(self):
         return {
@@ -275,7 +279,7 @@ class Form(Tag, FieldsetMixin):
         <script>
             $(function() {
                 $('form[action="%s"]').submit(function(event) {
-                    $(this).find('button[type=submit]').replaceWith('%s');
+                    $(this).find('.actions').html('%s');
                 })
             })
         </script>''' % (self.props.action, self.inject(Icon, {

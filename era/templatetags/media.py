@@ -10,6 +10,7 @@ from .markup import Alert
 class Include(Tag):
     el = 'link'
     nobody = True
+    named = False
 
     def get_defaults(self):
         return {'static': True, 'host': False}

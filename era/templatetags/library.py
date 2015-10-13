@@ -8,18 +8,13 @@ from classytags.core import Tag as ClassyTag
 from django.template import Library, TemplateSyntaxError
 from django.template.loader import render_to_string
 
-from ..utils.functools import call, unpack_args, reduce_dict, map_values, \
+from ..utils.functools import call, unpack_args, filter_dict, reduce_dict, map_values, \
     truthful, factual, pick, omit
 from ..utils.translation import normalize
-from ..utils.urls import get_site_url
+from ..utils.urls import resolve, get_site_url
 
 register = Library()
 register.era = lambda cls: register.tag(normalize(cls.__name__), cls)
-
-
-@register.filter
-def get(d, k):
-    return d.get(k)
 
 
 @register.era
@@ -91,7 +86,15 @@ class Props(dict):
         raise AttributeError('Missing prop: ' + name)
 
 
-class Component(ClassyTag):
+class RequestUrlMixin:
+    def check_active(self, *args):
+        return resolve(self.request.path).url_name in args
+
+    def get_host(self, *args, **kw):
+        return get_site_url(self.request, *args, **kw)
+
+
+class Component(RequestUrlMixin, ClassyTag):
     def __init__(self, parser=None, tokens=None):
         self.blocks = {}
         self.set_options()
@@ -105,14 +108,8 @@ class Component(ClassyTag):
         return '' if not cls else cls().render_tag(self.context, **dict(
             props or {}, **(nodelist is not None and {'nodelist': nodelist} or {})))
 
-    def join(self, *components):
-        return ''.join(map(lambda x: self.inject(x), components))
-
     def build(self, args, prefix='render'):
         return map(lambda arg: call(getattr(self, '_'.join([prefix, arg]))), args)
-
-    def get_host(self, *args, **kw):
-        return get_site_url(self.request, *args, **kw)
 
     def get_defaults(self):
         return {}
@@ -191,6 +188,7 @@ class Tag(ComplexComponent):
     el = 'div'
     nobody = False
     inline = False
+    named = True
 
     def get_nodelist(self):
         return self.props.nodelist
@@ -198,25 +196,31 @@ class Tag(ComplexComponent):
     def resolve_attrs(self):
         return {}
 
+    def resolve_node_name(self):
+        return self.named and ' '.join(map(
+            lambda cls: normalize(cls.__name__),
+            self.__class__.__mro__[:self.__class__.__mro__.index(Tag)]))
+
     def resolve_tag(self):
         attrs = dict(
             self.props.get('attrs', {}),
             **self.resolve_attrs())
-        if 'id' in self.props:
-            attrs['id'] = self.props.id
-        if 'class' in self.props:
-            attrs['class'] = ' '.join(factual([
+        attrs.update(filter_dict(
+            lambda k, v: v, {
+            'id': self.props.get('id'),
+            'class': ' '.join(factual([
+                self.resolve_node_name(),
                 attrs.get('class', ''),
-                self.props['class']]))
+                self.props.get('class', '')]))}))
         return {
             'el': self.props.get('el', getattr(self, 'el')),
             'attrs': ' '.join(reduce_dict(
                 lambda k, v: v and '{0}="{1}"'.format(k, v) or k,
                 attrs))}
 
-    def set_options(self):
-        return super().set_options(**(
-            (self.inline or self.nobody) and {'blocks': []} or {}))
+    def set_options(self, **kw):
+        return super().set_options(**dict(kw, **(
+            (self.inline or self.nobody) and {'blocks': []} or {})))
     
     def set_props(self, **kw):
         super().set_props(**kw)

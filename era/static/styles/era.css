@@ -13,6 +13,7 @@ ul {list-style: none; padding: 0px;}
 /* Forms */
 .form-control {border-radius: 5px;}
 .form-control[readonly] {background-color: inherit; cursor: context-menu;}
+.form-group {position: relative;}
 
 /* Lists */
 .list-panel {margin-top: 40px;}
@@ -22,7 +23,5 @@ ul {list-style: none; padding: 0px;}
 .pager li span {margin: 10px;}
 
 /* Tables */
-table td {vertical-align: middle !important;}
-table tr {height: 40px;}
-@media (max-width: 768px) {
-    .table-responsive {display: block; width: inherit;}}
+td {vertical-align: middle !important;}
+@media screen and (min-width: 992px) {tr {height: 40px;}}

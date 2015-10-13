@@ -1,4 +1,6 @@
+from itertools import chain
 import re
+
 from django.conf import settings
 from django.contrib import messages
 from django.core.urlresolvers import reverse
@@ -10,9 +12,13 @@ from ..utils.urls import dispatch_decorator
 
 
 class BaseViewMixin:
+    keywords = []
+
     @property
     def about(self):
-        return re.sub(r'-view$', '', normalize(self.__class__.__name__))
+        return ' '.join(chain(
+            self.keywords,
+            [re.sub(r'-view$', '', normalize(self.__class__.__name__))]))
 
     def send_message(self, level, content):
         content and getattr(messages, level)(self.request, content)
