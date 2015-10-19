@@ -12,7 +12,7 @@ from django.utils.functional import cached_property
 from django.views.generic.list import BaseListView
 
 from ..components import ObjectsList, ChangeList
-from ..utils.functools import just, call, first, pluck, \
+from ..utils.functools import just, call, first, pluck, pick, \
     map_keys, map_values, reduce_dict, filter_dict
 from ..utils.translation import _, get_string, get_model_names, verbose_choices
 from .base import BaseView
@@ -21,6 +21,12 @@ from .base import BaseView
 class ListView(BaseView, BaseListView):
     components = {'content': ObjectsList}
     list_display = []
+
+    @property
+    def columns(self, *args, **kw):
+        if not hasattr(self, '_columns'):
+            self._columns = self.get_list_view('display')
+        return self._columns
 
     def lookup_field(self, obj, field, next_obj=getattr, end_obj=getattr):
         if not '__' in field:
@@ -78,7 +84,7 @@ class ListView(BaseView, BaseListView):
         return list(map(
             self.display_column, map(
                 self.get_model_field,
-                self.get_list_view('display'))))
+                self.columns)))
 
     def get_tbody_items(self, objects):
         return list(map(
@@ -87,7 +93,7 @@ class ListView(BaseView, BaseListView):
                 'fields': list(map(
                     lambda name: self.display_field(
                         name, self.get_model_field(name), obj),
-                    self.get_list_view('display')))},
+                    self.columns))},
             objects))
 
     def get_context_data(self, **kw):
@@ -98,13 +104,15 @@ class ListView(BaseView, BaseListView):
             tbody=self.get_tbody_items(data['object_list']))
 
 
-class AdminView(ListView):
+class ObjectsView(ListView):
     components = {'content': ChangeList}
     list_filter = []
     list_counters = []
     list_sort = []
     list_search = []
-    default_filters = {}
+    search_method = 'icontains'
+    default_state = {}
+    paginate_by = 15
     actions = [{
         'icon': 'plus-square',
         'title': _('Add'),
@@ -112,38 +120,19 @@ class AdminView(ListView):
         'link': {'rel': 'add'}}]
 
     @property
-    def objects(self):
-        if not hasattr(self, '_objects'):
-            self._objects = self.get_queryset(ignore_state=True)
-        return self._objects
+    def stateful(self):
+        if not hasattr(self, '_stateful'):
+            self._stateful = self.check_stateful()
+        return self._stateful
 
-    @property
-    def filters(self):
-        return self.get_filters()
+    def check_stateful(self):
+        return True
 
-    @property
-    def filter_keys(self):
-        return map(
-            first, map(
-                lambda name: self.get_filter(name, self.get_model_field(name)),
-                self.get_list_view('filter')))
+    def map_state(self, key, method='filter'):
+        return '-'.join([method, key])
 
-    @property
-    def sort_keys(self):
-        return map(
-            lambda name: name.replace('__', '.'),
-            self.get_list_view('sort'))
-
-    @property
-    def active_filters(self):
-        return list(map(
-            first, filter(
-                lambda f: f[1] in self.request.GET,
-                zip(
-                    self.list_filter,
-                    map(
-                        lambda key: '-'.join(['filter', key]),
-                        self.filter_keys)))))
+    def get_default_state(self):
+        return self.default_state
 
     def get_state(self, method):
         return map_keys(
@@ -158,104 +147,153 @@ class AdminView(ListView):
                             lambda k, v: k.startswith(method),
                             self.request.GET)))))
 
-    def get_queryset(self, ignore_state=False):
+    def get_queryset(self, ignore_state=False, ignore_attrs=None):
         qs = self.model.objects.all() if self.queryset is None else self.queryset
         if not ignore_state:
-            states = {k: self.get_state(k) for k in ('filter', 'sort')}
-            if states['filter']:
-                qs = qs.filter(**states['filter'])
-            if states['sort']:
-                qs = qs.order_by(*reduce_dict(
-                    lambda k, v: ('-' if v is False else '') + k,
-                    states['sort']))
+            if self.states['filter']:
+                qs = qs.filter(**filter_dict(
+                    lambda k, v: not k in (ignore_attrs or []),
+                    self.states['filter']))
             if 'search' in self.request.GET:
                 for word in self.request.GET['search'].split():
                     qs = qs.filter(reduce(
                         operator.or_, map(
                         lambda lookup: Q(**{lookup: word}),
                         map(
-                            lambda f: '__'.join([f, 'icontains']),
+                            lambda f: '__'.join([f, self.search_method]),
                             self.get_list_view('search')))))
+            if not ignore_attrs and self.states['sort']:
+                #import ipdb; ipdb.set_trace()
+                qs = qs.order_by(*reduce_dict(
+                    lambda k, v: ('-' if v is False else '') + k,
+                    self.states['sort']))
         return qs
 
-    def get_list_view(self, op, value=None):
-        if op == 'display':
-            value = list(filter(
-                lambda f: not f in self.active_filters,
-                (value or self.list_display)))
-        return super().get_list_view(op, value)
+    def resolve_generic_filter(self, attr, choices, state):
+        result = {'key': attr.replace('__', '.')}
+        if choices:
+            result['choices'] = []
+            values = pluck(
+                self.get_queryset(ignore_state=(not state), ignore_attrs=[attr]),
+                result['key'])
+            for choice in choices:
+                count = values.count(choice[0])
+                if count:
+                    result['choices'].append(list(chain(choice, [count])))
+        return result
+
+    def resolve_filter(self, attr, state):
+        field = self.get_model_field(attr)
+        if isinstance(field, BooleanField):
+            result = self.resolve_generic_filter(
+                attr,
+                state is not None and [(True, _('Yes').lower()), (False, _('No').lower())],
+                state)
+        elif field.is_relation:
+            result = self.resolve_generic_filter(
+                attr + '__pk',
+                state is not None and map(
+                    lambda obj: (obj.pk, str(obj)),
+                    field.rel.to.objects.all()),
+                state)
+        elif hasattr(field, 'choices'):
+            result = self.resolve_generic_filter(
+                attr,
+                state is not None and field.choices,
+                state)
+        else:
+            method = 'resolve_{0}_filter'.format(get_string(attr))
+            result = getattr(self, method)(attr, state=state)
+        return result
+
+    def resolve_filters(self, **kw):
+        return list(map(
+            lambda name: dict({'name': name}, **self.resolve_filter(name, **kw)),
+            self.get_list_view('filter')))
+
+    def get_filters(self):
+        return list(map(
+            lambda f: dict(f, **{
+                'title': self.display_column(self.get_model_field(f['name'])),
+                'counters': f['name'] in self.get_list_view('counters')}),
+            self.resolve_filters(state=True)))
 
     def get_actions(self):
         return self.actions
 
-    def get_generic_filter(self, name, choices):
-        result = []
-        name = name.replace('__', '.')
-        values = pluck(self.objects, name)
-        for choice in choices:
-            count = values.count(choice[0])
-            if count:
-                result.append(list(chain(choice, [count])))
-        return [name, result]
+    def change_list_view(self, op, value=None):
+        if op == 'display':
+            value = list(filter(
+                lambda f: not f in self.active_filters,
+                (value or self.list_display)))
+        return value
 
-    def get_filter(self, name, field):
-        storage = '_{0}_filter'.format(name)
-        if not hasattr(self, storage):
-            if isinstance(field, BooleanField):
-                result = self.get_generic_filter(
-                    name, [(True, _('Yes').lower()), (False, _('No').lower())])
-            elif field.is_relation:
-                result = self.get_generic_filter(
-                    name + '__pk', map(
-                        lambda obj: (obj.pk, str(obj)),
-                        field.rel.to.objects.all()))
-            elif hasattr(field, 'choices'):
-                result = self.get_generic_filter(name, field.choices)
-            else:
-                method = 'get_{0}_filter'.format(get_string(name))
-                result = getattr(self, method)(name, field)
-            setattr(self, storage, result)
-        return getattr(self, storage)
+    def get_list_view(self, op, value=None):
+        if not hasattr(self, '_list_view'):
+            self._list_view = {}
+        if not op in self._list_view:
+            self._list_view[op] = super().get_list_view(
+                op, self.change_list_view(op, value))
+        return self._list_view[op]
 
-    def get_filters(self):
-        return list(map(
-            lambda name: chain(
-                [self.display_column(self.get_model_field(name))],
-                self.get_filter(name, self.get_model_field(name)),
-                [name in self.get_list_view('counters')]),
-            self.get_list_view('filter')))
+    def define_state(self):
+        self.sort_keys = list(map(
+            lambda name: name.replace('__', '.'),
+            self.get_list_view('sort')))
+        self.filter_keys = list(map(
+            lambda f: f['key'],
+            self.resolve_filters(state=None)))
+        self.states = {k: self.get_state(k) for k in ('filter', 'sort')}
+        self.active_filters = list(map(
+            first,
+            filter(
+                lambda z: self.map_state(z[-1]) in self.request.GET,
+                zip(self.get_list_view('filter'), self.filter_keys))))
+
+    @property
+    def redirection(self):
+        if self.stateful:
+            default_state = self.get_default_state()
+            if not self.model.objects.count():
+                return self.navigate('-'.join([
+                    get_string(get_model_names(self.model)[0]),
+                    'add']))
+            elif not self.request.GET and default_state:
+                kw = {}
+                if 'filters' in default_state:
+                    for f in self.resolve_filters(state=False):
+                        if len(f['choices']) == 1:
+                            kw[self.map_state(f['key'])] = f['choices'][0][0]
+                        elif f['key'] in default_state['filters']:
+                            kw[self.map_state(f['key'])] = default_state['filters'][f['key']]
+                if 'sort' in default_state:
+                    kw.update(map_keys(
+                        lambda k: self.map_state(k, 'sort'),
+                        self.default_state['sort']))
+                if kw:
+                    return redirect('?'.join([self.request.path, urlencode(kw)]))
+            self.define_state()
+
+    def get(self, request, *args, **kw):
+        return self.redirection or super().get(request, *args, **kw)
+
+    def get_context_data(self, **kw):
+        data = super().get_context_data(**kw)
+        if self.stateful:
+            return dict(
+                data,
+                filters=self.get_filters(),
+                actions=self.get_actions(),
+                search=bool(len(self.get_list_view('search'))))
+        return data
 
     def get_thead_items(self):
         return map(
             lambda name: [
                 self.display_column(self.get_model_field(name)),
                 name in self.get_list_view('sort') and name.replace('__', '.')],
-            self.get_list_view('display'))
+            self.columns)
 
-    def get_context_data(self, **kw):
-        return dict(
-            super().get_context_data(**kw),
-            actions=self.get_actions(),
-            filters=self.filters,
-            search=bool(len(self.get_list_view('search'))))
 
-    def get_redirect_features(self):
-        if not self.objects:
-            return self.navigate('-'.join([
-                get_string(get_model_names(self.model)[0]),
-                'add']))
-        if self.list_filter and not self.request.GET:
-            kw = {}
-            state = lambda key: '-'.join(['filter', key])
-            for (title, key, choices, counters) in self.filters:
-                choices = list(map(first, choices))
-                if len(choices) == 1:
-                    kw[state(key)] = choices[0]
-                elif key in self.default_filters:
-                    kw[state(key)] = self.default_filters[key]
-            if kw:
-                return redirect('?'.join([self.request.path, urlencode(kw)]))
-
-    def get(self, request, *args, **kwargs):
-        return self.get_redirect_features() \
-            or super().get(request, *args, **kwargs)
+class AdminView(ObjectsView):
+    pass

@@ -2,7 +2,10 @@
 html, body {height: 100%;}
 body {font-family: Arial;}
 ul {list-style: none; padding: 0px;}
+
+/* Icons */
 .caption i.fa {width: 25px;}
+.caret {margin: 4px 0px 8px 8px}
 
 /* Helpers */
 .hidden {display: none;}
@@ -16,7 +19,7 @@ ul {list-style: none; padding: 0px;}
 .form-group {position: relative;}
 
 /* Lists */
-.list-panel {margin-top: 40px;}
+.list-panel {padding-top: 5px;}
 .list-panel input {margin: 10px 0px;}
 .list-panel button {width: 100%; margin-bottom: 10px;}
 .list-panel i.fa {margin-top: 5px;}
