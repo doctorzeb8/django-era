@@ -2,6 +2,7 @@ from importlib import import_module
 from itertools import chain
 from functools import reduce
 
+from django.conf import settings
 from django.conf.urls import url, patterns
 from django.core.urlresolvers import resolve
 from django.shortcuts import render
@@ -86,5 +87,5 @@ def http_error(code, title):
     return lambda req: render(
         req,
         'errors.html',
-        {'code': code, 'page_title': title.lower()},
+        {'code': code, 'page_title': title.lower(), 'codename': settings.CODENAME},
         status=code)

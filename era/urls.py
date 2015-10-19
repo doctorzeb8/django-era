@@ -12,7 +12,10 @@ try:
     from app.urls import urlpatterns as index
     urlpatterns = index
 except ImportError:
-    urlpatterns = patterns('', url(
+    urlpatterns = patterns('')
+
+if not 'index' in [x.name for x in urlpatterns]:
+    urlpatterns += patterns('', url(
         r'^$',
         import_string(settings.INDEX_VIEW).as_view(),
         name='index'))
