@@ -104,7 +104,7 @@ class ListView(BaseView, BaseListView):
             tbody=self.get_tbody_items(data['object_list']))
 
 
-class ObjectsView(ListView):
+class CollectionView(ListView):
     components = {'content': ChangeList}
     list_filter = []
     list_counters = []
@@ -163,7 +163,6 @@ class ObjectsView(ListView):
                             lambda f: '__'.join([f, self.search_method]),
                             self.get_list_view('search')))))
             if not ignore_attrs and self.states['sort']:
-                #import ipdb; ipdb.set_trace()
                 qs = qs.order_by(*reduce_dict(
                     lambda k, v: ('-' if v is False else '') + k,
                     self.states['sort']))
@@ -293,7 +292,3 @@ class ObjectsView(ListView):
                 self.display_column(self.get_model_field(name)),
                 name in self.get_list_view('sort') and name.replace('__', '.')],
             self.columns)
-
-
-class AdminView(ObjectsView):
-    pass
