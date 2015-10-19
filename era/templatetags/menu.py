@@ -19,13 +19,12 @@ class MenuItem(Tag):
             'divider': False,
             'include': True,
             'disabled': False,
-            'url': None}
+            'link': {'url': None}}
 
     def get_nodelist(self):
         if self.props.divider or not self.props.include:
             return ''
-        return self.inject(
-            Link, pick(self.props, 'url', 'reverse'), self.props.caption)
+        return self.inject(Link, self.props.link, self.props.caption)
 
     def resolve_props(self):
         return {'caption': self.inject(Caption, self.props.caption)}
@@ -55,7 +54,7 @@ class Dropdown(Tag):
         return ''.join([
             self.inject(
                 Link,
-                pick(self.props, 'url', 'reverse'),
+                self.props.link,
                 ''.join([
                     self.inject(Caption, self.props.caption),
                     '' if not self.props.nodelist else self.inject(
@@ -77,6 +76,7 @@ class Menu(Tag):
         return self.props.items or []
 
     def resolve_item(self, item):
+        link = item.get('link', {})
         if 'divider' in item:
             return {}
         elif 'model' in item:
@@ -84,22 +84,22 @@ class Menu(Tag):
             if not 'title' in item['caption']:
                 item['caption']['title'] = get_model_names(model)[-1]
             (prefix, url) = map(get_string, get_model_names(model))
-            if not 'url' in item:
-                item['url'] = url
+            if not 'url' in link:
+                link['url'] = url
             item['active'] = self.check_active(
                 url, *map(
                     lambda suffix: '-'.join([prefix, suffix]),
                     ['add', 'edit']))
         elif not 'active' in item:
-            if item.get('url') and item.get('reverse', True):
-                item['active'] = self.check_active(item['url'])
+            if link.get('url') and link.get('reverse', True):
+                item['active'] = self.check_active(link.get('url'))
             else:
                 item['active'] = False
         if 'include' in item and item['include'] is None:
             item['include'] = item.get('active')
         if item.get('disabled'):
-            item.update({'url': '#', 'reverse': False})
-        return item
+            link.update({'url': '#', 'reverse': False})
+        return dict(item, link=link)
 
     def resolve_items(self):
         return map(self.resolve_item, self.get_items())
@@ -127,16 +127,15 @@ class Menu(Tag):
         if len(include_items):
             toggle = item['caption'].get('toggle', True)
             props = dict({
-                'url': '#',
-                'reverse': False,
+                'link': {},
                 'nodelist': '',
                 'active': bool(active_items)},
-                **pick(item, 'caption', 'attrs', 'url', 'reverse'))
+                **pick(item, 'caption', 'attrs', 'link'))
 
             display = first(props['active'] and active_items or include_items)
             if item['caption'].get('collapse', True) and len(include_items) == 1:
                 if not props['active']:
-                    props.update(pick(display, 'url'))
+                    props['link'].update(pick(display, 'url'))
                 if toggle:
                     props.update(pick(display, 'caption'))
                 return self.inject(MenuItem, props)
