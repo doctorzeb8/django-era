@@ -202,10 +202,9 @@ class ChangeList(ObjectsList):
 
     def render_filters(self):
         result = []
-        for args in self.props.filters:
-            props = dict(zip(['title', 'key', 'choices', 'counters'], args))
-            if props['choices']:
-                result.append(self.inject(QuerySetFilter, props))
+        for f in self.props.filters:
+            if f['choices']:
+                result.append(self.inject(QuerySetFilter, f))
         return result
 
     def render_panel(self):

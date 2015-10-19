@@ -48,6 +48,12 @@ class HTMLTag:
     def modify_content(self, content, fmt):
         self.el = re.sub(r'>(.*)<', fmt.format(content), self.el)
 
+    def after(self, content):
+        self.el += content
+
+    def before(self, content):
+        self.el = content + self.el
+
     def append(self, content):
         self.modify_content(content, r'>\g<1>{0}<')
 
@@ -95,18 +101,42 @@ class RequestUrlMixin:
 
 
 class Component(RequestUrlMixin, ClassyTag):
-    def __init__(self, parser=None, tokens=None):
+    def __init__(self, parser=None, tokens=None, context=None):
+        self.set_context(context or {})
         self.blocks = {}
         self.set_options()
         parser and super().__init__(parser, tokens)
 
     @classmethod
     def as_string(cls, request=None, **kw):
-        return cls().render_tag({'request': request}, **kw)
+        # TODO: move to view.show
+        obj = cls(context={'request': request})
+        obj.set_props(kw)
+        return obj.render_dom()
 
-    def inject(self, cls, props=None, nodelist=None):
-        return '' if not cls else cls().render_tag(self.context, **dict(
-            props or {}, **(nodelist is not None and {'nodelist': nodelist} or {})))
+    def inject(self, *args, **kw):
+        # TODO: deprecate
+        return self.show(*args, **kw)
+
+    def insert(self, cls, props=None, nodelist=None, **kw):
+        obj = cls(context=self.context)
+        if nodelist is not None:
+            kw['nodelist'] = nodelist
+        obj.set_props(props, **kw)
+        return obj
+
+    def show(self, cls, props=None, nodelist=None, **kw):
+        return self.insert(cls, props, nodelist, **kw).render_dom()
+
+    def render_tag(self, context=None, mka=None, **kw):
+        if not self.context and context:
+            self.set_context(context)
+        self.set_props(
+            dict(mka, **kw),
+            **map_values(
+                lambda val: val.render(self.context),
+                self.blocks))
+        return self.render_dom()
 
     def build(self, args, prefix='render'):
         return map(lambda arg: call(getattr(self, '_'.join([prefix, arg]))), args)
@@ -123,28 +153,30 @@ class Component(RequestUrlMixin, ClassyTag):
     def resolve_props(self):
         return {}
 
+    def set_context(self, context):
+        self.context = context
+        self.request = self.context.get('request')
+
     def set_options(self, **kw):
         self.options = Options(MultiKeywordArgument('mka', required=False), **kw)
 
-    def set_props(self, **kw):
+    def set_props(self, d, **kw):
         self.props = Props(
             self.get_defaults(),
-            **dict(kw, **map_values(lambda val: val.render(self.context), self.blocks)))
+            **dict(d or {}, **kw))
         self.props.update(self.resolve_props())
 
-    def render_tag(self, context, mka=None, **kw):
-        self.context = context
-        self.request = context['request']
-        self.set_props(**dict(mka or {}, **kw))
-        return self.render_dom()
-
     def render_dom(self):
+        self.tune()
         self.dom = HTMLTag(self.DOM())
         self.tweak()
         return str(self.dom)
 
     def DOM(self):
         raise NotImplementedError
+
+    def tune(self):
+        pass
 
     def tweak(self):
         if not 'attrs' in self.props and 'class' in self.props:
@@ -173,14 +205,6 @@ class TemplateComponent(Component):
 
     def render_dom(self):
         return render_to_string(self.template, dict(self.context, **self.props))
-
-
-@register.era
-class Inject(Component):
-    def DOM(self):
-        return '' if not self.props.component else self.inject(
-            lambda: self.props.component,
-            omit(self.props, 'component'))
 
 
 @register.era
@@ -221,11 +245,6 @@ class Tag(ComplexComponent):
     def set_options(self, **kw):
         return super().set_options(**dict(kw, **(
             (self.inline or self.nobody) and {'blocks': []} or {})))
-    
-    def set_props(self, **kw):
-        super().set_props(**kw)
-        self.props.update(self.resolve_tag())
-        not self.nobody and self.props.update({'nodelist': self.get_nodelist()})
 
     def DOM(self):
         return ''.join([
@@ -233,8 +252,18 @@ class Tag(ComplexComponent):
             '/>' if self.nobody else '>{nodelist}</{el}>']) \
         .format(**self.props)
 
+    def tune(self):
+        self.props.update(self.resolve_tag())
+        not self.nobody and self.props.update({'nodelist': self.get_nodelist()})
+
+    def tweak(self):
+        pass
+
 
 @register.era
-class Content(Component):
+class Content(Tag):
+    el = 'main'
+    inline = True
+
     def DOM(self):
         return self.inject(self.context['components'].get('content', None))

@@ -1,9 +1,10 @@
+from functools import reduce
 from itertools import chain
 from django.conf import settings
 from django.apps import apps
 from django.utils.text import capfirst
 
-from ..utils.functools import factual, pick, omit
+from ..utils.functools import factual, first, pick, omit
 from ..utils.translation import get_string, get_model_names
 from ..utils.urls import exists_import
 from .library import register, Component, ComplexComponent, Tag
@@ -18,8 +19,7 @@ class MenuItem(Tag):
             'divider': False,
             'include': True,
             'disabled': False,
-            'url': None,
-            'reverse': True}
+            'url': None}
 
     def get_nodelist(self):
         if self.props.divider or not self.props.include:
@@ -28,30 +28,7 @@ class MenuItem(Tag):
             Link, pick(self.props, 'url', 'reverse'), self.props.caption)
 
     def resolve_props(self):
-        result = {}
-        if self.props.divider:
-            return {}
-        elif 'model' in self.props:
-            model = apps.get_model(*self.props.model.split('.'))
-            self.props.caption['title'] = get_model_names(model)[-1]
-            (prefix, url) = map(get_string, get_model_names(model))
-
-            result['url'] = url
-            result['active'] = self.check_active(
-                url, *map(
-                    lambda suffix: '-'.join([prefix, suffix]),
-                    ['add', 'edit']))
-        elif not 'active' in self.props:
-            if self.props.url and self.props.reverse:
-                result['active'] = self.check_active(self.props.url)
-            else:
-                result['active'] = False
-        if self.props.include is None:
-            result['include'] = result.get('active', self.props.active)
-        if self.props.disabled:
-            result.update({'url': '#', 'reverse': False})
-        result['caption'] = self.inject(Caption, self.props.caption)
-        return result
+        return {'caption': self.inject(Caption, self.props.caption)}
 
     def tweak(self):
         if not self.props.include:
@@ -63,18 +40,114 @@ class MenuItem(Tag):
         super().tweak()
 
 
+class Dropdown(Tag):
+    el = 'li'
+
+    def get_defaults(self):
+        return {'active': False}
+
+    def resolve_props(self):
+        if self.props.active:
+            return {'class': 'active'}
+        return {}
+
+    def get_nodelist(self):
+        return ''.join([
+            self.inject(
+                Link,
+                pick(self.props, 'url', 'reverse'),
+                ''.join([
+                    self.inject(Caption, self.props.caption),
+                    '' if not self.props.nodelist else self.inject(
+                        Tag, {'el': 'span', 'class': 'caret'})]),
+                attrs={
+                    'class': 'dropdown-toggle',
+                    'data-toggle': 'dropdown'}),
+            '' if not self.props.nodelist else self.inject(
+                Tag,
+                {'el': 'ul', 'class': 'dropdown-menu'},
+                self.props.nodelist)])
+
+
 class Menu(Tag):
     el = 'ul'
     inline = True
 
     def get_items(self):
-        return self.props.items
+        return self.props.items or []
+
+    def resolve_item(self, item):
+        if 'divider' in item:
+            return {}
+        elif 'model' in item:
+            model = apps.get_model(*item['model'].split('.'))
+            if not 'title' in item['caption']:
+                item['caption']['title'] = get_model_names(model)[-1]
+            (prefix, url) = map(get_string, get_model_names(model))
+            if not 'url' in item:
+                item['url'] = url
+            item['active'] = self.check_active(
+                url, *map(
+                    lambda suffix: '-'.join([prefix, suffix]),
+                    ['add', 'edit']))
+        elif not 'active' in item:
+            if item.get('url') and item.get('reverse', True):
+                item['active'] = self.check_active(item['url'])
+            else:
+                item['active'] = False
+        if 'include' in item and item['include'] is None:
+            item['include'] = item.get('active')
+        if item.get('disabled'):
+            item.update({'url': '#', 'reverse': False})
+        return item
+
+    def resolve_items(self):
+        return map(self.resolve_item, self.get_items())
+
+    def filter_items(self, fn=lambda i: True, items=None):
+        if items is None:
+            items = self.resolve_items()
+        return list(filter(lambda i: i.get('include', True) and fn(i), items))
 
     def render_item(self, item):
-        if isinstance(item, list):
-            return self.inject(
-                Dropdown, {'toggle': item[0], 'menu': item[1:]})
+        if 'dropdown' in item:
+            return self.render_dropdown(item) or ''
         return self.inject(MenuItem, item)
+
+    def render_items(self, items=None):
+        if items is None:
+            items = self.resolve_items()
+        return ''.join(map(self.render_item, items))
+
+    def render_dropdown(self, item):
+        items = list(item['dropdown'].resolve_items())
+        include_items = self.filter_items(items=items)
+        active_items = self.filter_items(lambda i: i.get('active'), items)
+
+        if len(include_items):
+            toggle = item['caption'].get('toggle', True)
+            props = dict({
+                'url': '#',
+                'reverse': False,
+                'nodelist': '',
+                'active': bool(active_items)},
+                **pick(item, 'caption', 'attrs', 'url', 'reverse'))
+
+            display = first(props['active'] and active_items or include_items)
+            if item['caption'].get('collapse', True) and len(include_items) == 1:
+                if not props['active']:
+                    props.update(pick(display, 'url'))
+                if toggle:
+                    props.update(pick(display, 'caption'))
+                return self.inject(MenuItem, props)
+            if toggle and props['active']:
+                props.update(pick(display, 'caption'))
+                props['nodelist'] = self.render_items(self.filter_items(
+                    lambda i: not i.get('active'),
+                    items))
+            else:
+                props['nodelist'] = self.render_items(items)
+            return self.inject(Dropdown, props)
 
     def get_defaults(self):
         return {'pills': False, 'tabs': False, 'stacked': False}
@@ -84,44 +157,14 @@ class Menu(Tag):
             'pills', 'tabs', 'stacked', prefix='nav', include='nav')}
 
     def get_nodelist(self):
-        return ''.join(map(self.render_item, self.get_items()))
-
-
-class Dropdown(Tag):
-    el = 'li'
-
-    def get_nodelist(self):
-        return ''.join([
-            self.inject(
-                Link, {
-                    'url': self.props.toggle.get('url', '#'),
-                    'reverse': False,
-                    'attrs': {
-                        'class': 'dropdown-toggle',
-                        'data-toggle': 'dropdown'}},
-                ''.join([
-                    self.inject(Caption, self.props.toggle['caption']),
-                    '' if not self.props.menu else self.inject(
-                        Tag, {'el': 'span', 'class': 'caret'})])),
-            '' if not self.props.menu else self.inject(
-                Tag,
-                {'el': 'ul', 'class': 'dropdown-menu'},
-                ''.join(map(
-                    lambda i: self.inject(MenuItem, i),
-                    self.props.menu)))])
+        return self.render_items()
 
 
 @register.era
 class MainMenu(Menu):
-    def get_app_menu_items(self, cls):
-        result = cls()
-        result.request = self.request
-        result.context = self.context
-        return result.get_items()
-
     def get_items(self):
         return list(chain(*map(
-            self.get_app_menu_items,
+            lambda cls: self.insert(cls).get_items(),
             factual(map(
                 lambda module: getattr(
                     module,
@@ -129,4 +172,4 @@ class MainMenu(Menu):
                     None),
                 factual(map(
                     lambda app: exists_import('.'.join([app, 'components'])),
-                    settings.MODULES)))))))
+                    getattr(settings, 'MAIN_MENU', []))))))))

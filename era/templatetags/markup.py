@@ -4,12 +4,14 @@ from django.utils.text import capfirst
 from urllib.parse import urlencode
 
 from ..utils.functools import just, call, factual, reduce_dict, omit, pick, truthful
+from ..utils.translation import _
 from .library import register, Import, Component, ComplexComponent, Tag
 
 
 @register.era
 class Icon(Tag):
     el = 'i'
+    inline = True
 
     def resolve_attrs(self):
         return {
@@ -256,10 +258,20 @@ class Navbar(Tag):
     parts = ['head', 'brand', 'collapse']
 
     def get_defaults(self):
-        return {'key': 'default', 'container': False}
+        return {
+            'key': 'default',
+            'container': False,
+            'fixed': False,
+            'margin': 20}
 
     def resolve_attrs(self):
-        return {'class': 'navbar-default'}
+        result = {'class': 'navbar-default'}
+        if self.props.fixed:
+            result['class'] = ' '.join([
+                result['class'], 'navbar-fixed-{0}'.format(self.props.fixed)])
+            if 'height' in self.props:
+                result['style'] = 'min-height: {0}px;'.format(self.props.height)
+        return result
 
     def get_nodelist(self):
         nodelist = ''.join([
@@ -286,10 +298,17 @@ class Navbar(Tag):
         return nodelist if not self.props.container else self.inject(
             Container, {'fluid': self.props.container == 'fluid'}, nodelist)
 
+    def tweak(self):
+        if self.props.fixed:
+            self.dom.before(self.inject(
+                Tag, {'el': 'style'}, 'body {{padding-{0}: {1}px;}}'.format(
+                    self.props.fixed, sum(map(int, [
+                        self.props.get('height', 50),
+                        self.props.margin])))))
+
 
 class Table(Tag):
     el = 'table'
-    named = False
 
     def slice(self, seq):
         return list(seq)[slice(*call(
@@ -337,10 +356,12 @@ class Table(Tag):
                 'hover',
                 'condensed',
                 'responsive',
-                prefix='table',
-                include='table')}
+                prefix='table')}
 
     def get_nodelist(self):
+        body = list(self.get_tbody_items())
+        if not len(list(body)):
+            return _('(None)')
         return ''.join([
             self.inject(
                 Tag,
@@ -349,4 +370,4 @@ class Table(Tag):
             self.inject(
                 Tag,
                 {'el': 'tbody'},
-                self.render_items(self.get_tbody_items()))])
+                self.render_items(body))])
