@@ -137,7 +137,7 @@ class FormsetsMixin(ModelFormMixin):
                 map(first, self.get_choices(factory.model, field))))),
             fields))
         return list(map(
-            lambda i: map_values(lambda c: select(i, c), choices),
+            lambda i: map_values(lambda c: c and select(i, c), choices),
             range(1, factory.extra)))
 
     def get_formset_factory(self, formset_model, **kw):
