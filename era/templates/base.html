@@ -30,7 +30,7 @@
 
     {% block media %}
         <script>var django = {jQuery: $}</script>
-        {{ media }}
+        {{ media|safe }}
     {% endblock %}
 
     {% block design %}{% endblock %}

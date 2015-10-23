@@ -3,7 +3,7 @@ import re
 
 from django.conf import settings
 from django.contrib import messages
-from django.core.urlresolvers import reverse
+from django.core.urlresolvers import resolve, reverse
 from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from django.views.generic.base import TemplateResponseMixin, View
@@ -19,6 +19,10 @@ class BaseViewMixin:
         return ' '.join(chain(
             self.keywords,
             [re.sub(r'-view$', '', normalize(self.__class__.__name__))]))
+
+    @property
+    def url_match(self):
+        return resolve(self.request.path)
 
     def send_message(self, level, content):
         content and getattr(messages, level)(self.request, content)

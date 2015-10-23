@@ -11,7 +11,7 @@ from django.shortcuts import redirect
 from django.utils.functional import cached_property
 from django.views.generic.list import BaseListView
 
-from ..components import ObjectsList, ChangeList
+from ..components import ChangeList
 from ..utils.functools import just, call, first, pluck, pick, \
     map_keys, map_values, reduce_dict, filter_dict
 from ..utils.translation import _, get_string, get_model_names, verbose_choices
@@ -19,7 +19,6 @@ from .base import BaseView
 
 
 class ListView(BaseView, BaseListView):
-    components = {'content': ObjectsList}
     list_display = []
 
     @property
@@ -27,6 +26,11 @@ class ListView(BaseView, BaseListView):
         if not hasattr(self, '_columns'):
             self._columns = self.get_list_view('display')
         return self._columns
+
+    def get_column_key(self, column):
+        if isinstance(column, str):
+            return column
+        return column.string.replace(' ', '_')
 
     def lookup_field(self, obj, field, next_obj=getattr, end_obj=getattr):
         if not '__' in field:
@@ -80,28 +84,14 @@ class ListView(BaseView, BaseListView):
                 return value.count()
             return value
 
-    def get_thead_items(self):
+    def display_objects(self, objects):
         return list(map(
-            self.display_column, map(
-                self.get_model_field,
-                self.columns)))
-
-    def get_tbody_items(self, objects):
-        return list(map(
-            lambda obj: {
-                'pk': obj.pk,
-                'fields': list(map(
-                    lambda name: self.display_field(
-                        name, self.get_model_field(name), obj),
-                    self.columns))},
+            lambda obj: dict({'pk': obj.pk}, **dict(map(
+                lambda c: (
+                    self.get_column_key(c),
+                    self.display_field(c, self.get_model_field(c), obj)),
+                self.columns))),
             objects))
-
-    def get_context_data(self, **kw):
-        data = super().get_context_data(**kw)
-        return dict(
-            data,
-            thead=self.get_thead_items(),
-            tbody=self.get_tbody_items(data['object_list']))
 
 
 class CollectionView(ListView):
@@ -128,6 +118,9 @@ class CollectionView(ListView):
     def check_stateful(self):
         return True
 
+    def map_attr(self, attr):
+        return attr.replace('__', '.')
+
     def map_state(self, key, method='filter'):
         return '-'.join([method, key])
 
@@ -149,7 +142,7 @@ class CollectionView(ListView):
 
     def get_queryset(self, ignore_state=False, ignore_attrs=None):
         qs = self.model.objects.all() if self.queryset is None else self.queryset
-        if not ignore_state:
+        if not ignore_state and self.stateful:
             if self.states['filter']:
                 qs = qs.filter(**filter_dict(
                     lambda k, v: not k in (ignore_attrs or []),
@@ -169,7 +162,7 @@ class CollectionView(ListView):
         return qs
 
     def resolve_generic_filter(self, attr, choices, state):
-        result = {'key': attr.replace('__', '.')}
+        result = {'key': self.map_attr(attr)}
         if choices:
             result['choices'] = []
             values = pluck(
@@ -221,7 +214,7 @@ class CollectionView(ListView):
         return self.actions
 
     def change_list_view(self, op, value=None):
-        if op == 'display':
+        if self.stateful and op == 'display':
             value = list(filter(
                 lambda f: not f in self.active_filters,
                 (value or self.list_display)))
@@ -237,7 +230,7 @@ class CollectionView(ListView):
 
     def define_state(self):
         self.sort_keys = list(map(
-            lambda name: name.replace('__', '.'),
+            self.map_attr,
             self.get_list_view('sort')))
         self.filter_keys = list(map(
             lambda f: f['key'],
@@ -276,19 +269,20 @@ class CollectionView(ListView):
     def get(self, request, *args, **kw):
         return self.redirection or super().get(request, *args, **kw)
 
+    def get_guide(self):
+        return list(map(
+            lambda name: [
+                name,
+                self.display_column(self.get_model_field(name)),
+                name in self.get_list_view('sort') and self.map_attr(name)],
+            self.columns))
+
     def get_context_data(self, **kw):
         data = super().get_context_data(**kw)
         if self.stateful:
-            return dict(
-                data,
-                filters=self.get_filters(),
-                actions=self.get_actions(),
-                search=bool(len(self.get_list_view('search'))))
-        return data
-
-    def get_thead_items(self):
-        return map(
-            lambda name: [
-                self.display_column(self.get_model_field(name)),
-                name in self.get_list_view('sort') and name.replace('__', '.')],
-            self.columns)
+            data.update({
+                'guide': self.get_guide(),
+                'filters': self.get_filters(),
+                'actions': self.get_actions(),
+                'search': bool(len(self.get_list_view('search')))})
+        return dict(data, objects=self.display_objects(data['object_list']))

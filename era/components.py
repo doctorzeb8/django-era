@@ -4,4 +4,4 @@ from .templatetags.markup import Icon, MarkedList, IconicList, Break, ProgressBa
 from era.templatetags.media import Script, Stylesheet, Image, Messages
 from .templatetags.menu import Menu, Dropdown
 from .templatetags.forms import Form
-from .templatetags.lists import ObjectsList, ChangeList
+from .templatetags.lists import Paginator, ChangeList

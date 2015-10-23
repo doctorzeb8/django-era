@@ -2,7 +2,7 @@ from functools import reduce
 from itertools import chain
 from urllib.parse import unquote
 
-from django.core.urlresolvers import resolve, reverse
+from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import OneToOneField
 from django.forms import Form as EmptyForm
@@ -182,10 +182,6 @@ class FormView(BaseView, FormsetsMixin, FormMixin):
         'icon': 'check-square',
         'title': _('Save'),
         'level': 'success'}]
-
-    @property
-    def url_match(self):
-        return resolve(self.request.path)
 
     def get_attrs_dict(self, *attrs):
         return dict(map(lambda x: (x, call(getattr(self, 'get_' + x))), attrs))

@@ -1,28 +1,11 @@
 from itertools import chain
 from django.core.urlresolvers import resolve
 
-from ..utils.functools import call, unpack_args, factual, pick
+from ..utils.functools import call, unpack_args, factual, pick, first
 from ..utils.translation.string import _
 from .library import Component, Tag
 from .markup import MarkedList, Break, Link, Icon, Caption, Column, Panel, Table
 from .forms import Action
-
-
-class ObjectsList(Component):
-    def resolve_props(self):
-        return self.context.dicts[2]
-
-    def render_row(self, row):
-        return {'items': row['fields']}
-
-    def render_queryset(self, component):
-        return self.inject(
-            component, {
-                'thead': self.props.thead,
-                'tbody': map(self.render_row, self.props.tbody)})
-
-    def DOM(self):
-        return self.render_queryset(Table)
 
 
 class QuerySetKey(Link):
@@ -172,9 +155,24 @@ class SearchLine(Tag):
             '''])
 
 
-class ChangeList(ObjectsList):
+class ChangeList(Component):
+    def resolve_props(self):
+        return self.context.dicts[2]
+
     def get_location_qs(self):
         return {'next': self.request.get_full_path()}
+
+    def render_objects(self):
+        return list(map(
+            lambda obj: {'items': chain(
+                [self.inject(
+                    Link,
+                    {'rel': str(obj['pk']), 'qs': self.get_location_qs()},
+                    obj.get(first(first(self.props.guide))))],
+                map(
+                    lambda k: obj.get(k),
+                    list(map(first, self.props.guide))[1:]))},
+            self.props.objects))
 
     def render_row(self, row):
         return {'items': chain(
@@ -184,8 +182,14 @@ class ChangeList(ObjectsList):
                 row['fields'][0])],
             row['fields'][1:])}
 
+    def render_table(self, component):
+        return self.inject(
+            component, {
+                'thead': map(lambda c: c[1:], self.props.guide),
+                'tbody': self.render_objects()})
+
     def render_queryset(self):
-        table = super().render_queryset(SortableTable)
+        table = self.render_table(SortableTable)
         if self.context['is_paginated']:
             return ''.join([table, self.inject(Paginator)])
         return table

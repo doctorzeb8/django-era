@@ -73,7 +73,7 @@ class Menu(Tag):
     inline = True
 
     def get_items(self):
-        return self.props.items or []
+        return self.props.get('items', [])
 
     def resolve_item(self, item):
         link = item.get('link', {})
