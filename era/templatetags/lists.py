@@ -174,14 +174,6 @@ class ChangeList(Component):
                     list(map(first, self.props.guide))[1:]))},
             self.props.objects))
 
-    def render_row(self, row):
-        return {'items': chain(
-            [self.inject(
-                Link,
-                {'rel': str(row['pk']), 'qs': self.get_location_qs()},
-                row['fields'][0])],
-            row['fields'][1:])}
-
     def render_table(self, component):
         return self.inject(
             component, {

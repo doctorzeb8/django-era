@@ -272,7 +272,7 @@ class CollectionView(ListView):
     def get_guide(self):
         return list(map(
             lambda name: [
-                name,
+                self.get_column_key(name),
                 self.display_column(self.get_model_field(name)),
                 name in self.get_list_view('sort') and self.map_attr(name)],
             self.columns))
