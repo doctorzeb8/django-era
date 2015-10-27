@@ -255,7 +255,7 @@ class Panel(Tag):
 @register.era
 class Navbar(Tag):
     el = 'nav'
-    parts = ['head', 'brand', 'collapse']
+    parts = ['head', 'brand', 'collapse', 'text']
 
     def get_defaults(self):
         return {
@@ -274,27 +274,30 @@ class Navbar(Tag):
         return result
 
     def get_nodelist(self):
-        nodelist = ''.join([
+        nodelist = ''.join(factual([
             self.inject(
                 Tag,
                 {'class': 'navbar-header'},
                 ''.join([
-                    self.inject(
+                    self.props.head or self.inject(
                         Tag,
                         {'el': 'button', 'attrs': {
                             'class': 'navbar-toggle collapsed',
                             'data-toggle': 'collapse',
                             'data-target': '#' + self.props.key}},
                         self.inject(Icon, {'name': 'align-justify'})),
-                    self.props.head,
                     '' if not self.props.brand else self.inject(
                         Link,
                         {'url': '/', 'reverse': False, 'class': 'navbar-brand'},
                         self.props.brand)])),
-            self.inject(
+            self.props.text and self.inject(
+                Tag,
+                {'el': 'p', 'class': 'navbar-text'},
+                self.props.text),
+            self.props.collapse and self.inject(
                 Tag,
                 {'attrs': {'id': self.props.key, 'class': 'navbar-collapse collapse'}},
-                self.props.collapse)])
+                self.props.collapse)]))
         return nodelist if not self.props.container else self.inject(
             Container, {'fluid': self.props.container == 'fluid'}, nodelist)
 
