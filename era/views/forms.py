@@ -21,7 +21,23 @@ from ..utils.translation import _, inflect, get_string, get_model_names
 from .base import BaseView
 
 
-class ModelFormMixin:
+class FormFieldsOverridesMixin:
+    def get_formfields_overrides(self):
+        return {
+            DateField: (DateTimePicker, {'key': 'date'}),
+            DateTimeField: (DateTimePicker, {'key': 'datetime'}),
+            TimeField: (DateTimePicker, {'key': 'time'})}
+
+    def override_form_fields(self, form):
+        overrides = self.get_formfields_overrides()
+        for field in form:
+            match = overrides.get(field.field.__class__, None)
+            if match:
+                Widget, kw = match
+                field.field.widget = Widget(**kw)
+
+
+class ModelFormMixin(FormFieldsOverridesMixin):
     empty_form = False
 
     @cached_property
@@ -99,21 +115,9 @@ class ModelFormMixin:
                 self.get_relation)),
             self.get_relation_fields()))
 
-    def get_overrides(self):
-        return dict({
-            DateField: (DateTimePicker, {'key': 'date'}),
-            DateTimeField: (DateTimePicker, {'key': 'datetime'}),
-            TimeField: (DateTimePicker, {'key': 'time'})
-            }, **getattr(self, 'form_display', {}))
-
     def prepare_form(self, form):
         if not self.empty_form:
-            overrides = self.get_overrides()
-            for field in form:
-                match = overrides.get(field.field.__class__, None)
-                if match:
-                    Widget, kw = match
-                    field.field.widget = Widget(**kw)
+            self.override_form_fields(form)
         return form
 
 
@@ -138,7 +142,7 @@ class FormsetsMixin(ModelFormMixin):
             fields))
         return list(map(
             lambda i: map_values(lambda c: c and select(i, c), choices),
-            range(1, factory.extra)))
+            range(0, factory.max_num)))
 
     def get_formset_factory(self, formset_model, **kw):
         if 'matrix' in kw:
@@ -157,6 +161,7 @@ class FormsetsMixin(ModelFormMixin):
         result = self.get_form_data(instance=self.instance, **kw)
         if 'matrix' in kw:
             result['initial'] = self.fill_matrix(factory, kw['prefix'], kw['matrix'])
+            #import ipdb; ipdb.set_trace()
         return result
 
     def inline_formset(self, formset_model, **kw):
@@ -165,6 +170,8 @@ class FormsetsMixin(ModelFormMixin):
         get_data = getattr(self, 'get_{0}_formset_data'.format(prefix), self.get_formset_data)
         formset = factory(**get_data(factory, **dict(omit(kw, 'constructor'), prefix=prefix)))
 
+        for form in formset.forms:
+            self.override_form_fields(form)
         if formset.can_delete and formset.validate_min:
             for form in formset.forms[:formset.min_num]:
                 form.fields['DELETE'].widget.attrs['disabled'] = True
