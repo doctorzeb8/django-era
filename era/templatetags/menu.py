@@ -46,9 +46,16 @@ class Dropdown(Tag):
         return {'active': False}
 
     def resolve_props(self):
+        result = {}
         if self.props.active:
-            return {'class': 'active'}
-        return {}
+            result['class'] = 'active'
+        if self.props.nodelist:
+            if not 'caret' in self.props:
+                result['caret'] = self.inject(
+                    Tag, {'el': 'span', 'class': 'caret'})
+        else:
+            result['caret'] = ''
+        return result
 
     def get_nodelist(self):
         return ''.join([
@@ -57,8 +64,7 @@ class Dropdown(Tag):
                 self.props.link,
                 ''.join([
                     self.inject(Caption, self.props.caption),
-                    '' if not self.props.nodelist else self.inject(
-                        Tag, {'el': 'span', 'class': 'caret'})]),
+                    self.props.caret]),
                 attrs={
                     'class': 'dropdown-toggle',
                     'data-toggle': 'dropdown'}),
@@ -130,7 +136,7 @@ class Menu(Tag):
                 'link': {},
                 'nodelist': '',
                 'active': bool(active_items)},
-                **pick(item, 'caption', 'attrs', 'link'))
+                **pick(item, 'caption', 'attrs', 'link', 'caret'))
 
             display = first(props['active'] and active_items or include_items)
             if item['caption'].get('collapse', True) and len(include_items) == 1:
@@ -167,7 +173,7 @@ class MainMenu(Menu):
             factual(map(
                 lambda module: getattr(
                     module,
-                    ''.join([capfirst(module.__package__), 'Menu']),
+                    ''.join([capfirst(module.__name__.split('.')[0]), 'Menu']),
                     None),
                 factual(map(
                     lambda app: exists_import('.'.join([app, 'components'])),

@@ -223,7 +223,9 @@ class Tag(ComplexComponent):
     def resolve_node_name(self):
         return self.named and ' '.join(map(
             lambda cls: normalize(cls.__name__),
-            self.__class__.__mro__[:self.__class__.__mro__.index(Tag)]))
+            filter(
+                lambda cls: getattr(cls, 'named', False),
+                self.__class__.__mro__[:self.__class__.__mro__.index(Tag)])))
 
     def resolve_tag(self):
         attrs = dict(

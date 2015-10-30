@@ -1,6 +1,6 @@
 from itertools import chain
 from django.forms import widgets
-from django.forms.widgets import TextInput, Textarea, CheckboxInput
+from django.forms.widgets import TextInput, Textarea, CheckboxInput, NumberInput
 from django.template.defaulttags import CsrfTokenNode
 
 from ..forms import EmptyWidget, DateTimePicker
@@ -12,11 +12,15 @@ from .markup import Row, Column, Table, Link, Button, Caption, Panel, Icon
 
 class WidgetCaseMixin:
     @property
-    def text_input_widgets(self):
-        return [DateTimePicker] + list(map(
+    def is_text_input(self):
+        return self.check_widget_in(*list(chain([DateTimePicker], map(
             lambda x: getattr(widgets, x), [
                 'TextInput', 'NumberInput', 'EmailInput',
-                'URLInput', 'PasswordInput', 'Textarea', 'Select']))
+                'URLInput', 'PasswordInput', 'Textarea', 'Select']))))
+
+    @property
+    def have_placeholder(self):
+        return self.check_widget_in(TextInput, Textarea, NumberInput)
 
     def check_widget_in(self, *args):
         return self.props.field.field.widget.__class__ in args
@@ -34,13 +38,13 @@ class Input(WidgetCaseMixin, RequiredAttrMixin, Component):
 
     def tweak(self):
         super().tweak()
-        if self.check_widget_in(*self.text_input_widgets):
+        if self.is_text_input:
             self.dom.add_class('form-control')
         if self.need_required:
             self.dom.add_attr('required')
         if self.props.inline:
             self.dom.add_attr('placeholder', self.props.field.label)
-        elif self.props.field.help_text and self.check_widget_in(TextInput, Textarea):
+        elif self.have_placeholder:
             self.dom.add_attr('placeholder', self.props.field.help_text)
 
 
@@ -95,7 +99,7 @@ class Field(WidgetCaseMixin, Group):
             control, pick(self.props, 'field', 'inline', 'set_required'), nodelist)
 
     def get_help_block(self):
-        if self.props.field.help_text and not self.check_widget_in(TextInput, Textarea):
+        if self.props.field.help_text and not self.have_placeholder:
             return self.inject(
                 Tag,
                 {'el': 'span', 'class': 'help-block'},
