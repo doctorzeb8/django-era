@@ -12,6 +12,7 @@ ul {list-style: none; padding: 0px;}
 .relative {position: relative;}
 .fixed {position: fixed;}
 .stretched {width: 100%;}
+.no-indent {margin: 0px; padding: 0px;}
 
 /* Forms */
 .form-control {border-radius: 5px;}
@@ -27,4 +28,5 @@ ul {list-style: none; padding: 0px;}
 
 /* Tables */
 td {vertical-align: middle !important;}
+td .form-group {margin: 0;}
 @media screen and (min-width: 992px) {tr {height: 40px;}}
