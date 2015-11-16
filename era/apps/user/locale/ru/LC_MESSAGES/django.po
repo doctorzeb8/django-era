@@ -1,0 +1,153 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: \n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-11-14 13:21+0800\n"
+"PO-Revision-Date: 2015-11-14 13:27+0800\n"
+"Language: ru\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
+"%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+"Last-Translator: \n"
+"Language-Team: \n"
+"X-Generator: Poedit 1.8.2\n"
+
+#: components.py:26 components.py:111 views.py:104
+msgid "login"
+msgstr "вход"
+
+#: components.py:30
+msgid "profile"
+msgstr "профиль"
+
+#: components.py:33
+msgid "logout"
+msgstr "выход"
+
+#: components.py:88 models.py:12
+msgid "code"
+msgstr "код"
+
+#: components.py:94
+msgid "confirm"
+msgstr "подтверждение"
+
+#: components.py:106
+msgid "password"
+msgstr "пароль"
+
+#: forms.py:8
+msgid "enter new password"
+msgstr "введите новый пароль"
+
+#: forms.py:51
+msgid "enter password again"
+msgstr "введите пароль еще раз"
+
+#: forms.py:66
+msgid "leave blank for random"
+msgstr "оставьте пустым для случайного"
+
+#: models.py:13
+msgid "confirmation"
+msgstr "подтверждение"
+
+#: models.py:19
+msgid "user"
+msgstr "пользователь"
+
+#: models.py:20
+msgid "users"
+msgstr "пользователи"
+
+#: models.py:24
+msgid "date joined"
+msgstr "дата регистрации"
+
+#: models.py:25
+msgid "access"
+msgstr "доступ"
+
+#: models.py:27
+msgid "email"
+msgstr "почта"
+
+#: models.py:28
+msgid "name"
+msgstr "имя"
+
+#: models.py:30
+msgid "role"
+msgstr "роль"
+
+#: views.py:65
+msgid "sorry, access denied"
+msgstr "извините, нет доступа"
+
+#: views.py:69
+#, python-brace-format
+msgid "welcome {username}"
+msgstr "добро пожаловать, {username}."
+
+#: views.py:78
+msgid "back"
+msgstr "назад"
+
+#: views.py:109
+msgid "join"
+msgstr "присоединиться"
+
+#: views.py:114
+msgid "unlock"
+msgstr "разблокировать"
+
+#: views.py:125
+msgid "sorry, unconfirmed data"
+msgstr "извините, данные не подтверждены"
+
+#: views.py:129 views.py:221 views.py:254
+msgid "sorry, invalid credentials"
+msgstr "извините, неверные данные"
+
+#: views.py:160
+msgid "your profile was updated successfully"
+msgstr "ваши данные успешно обновлены"
+
+#: views.py:166 views.py:204
+msgid "confirmation code has been sent"
+msgstr "код подтверждения выслан"
+
+#: views.py:171 views.py:235
+msgid "submit"
+msgstr "подтвердить"
+
+#: views.py:183
+msgid "sorry, user with such data exists"
+msgstr "извините, такой пользователь уже существует"
+
+#: views.py:193
+msgid "registration"
+msgstr "регистрация"
+
+#: views.py:205
+msgid "request"
+msgstr "запросить"
+
+#: views.py:213
+msgid "access restoration"
+msgstr "восстановление доступа"
+
+#: views.py:236
+msgid "repeat"
+msgstr "повторить"
+
+#: views.py:283
+msgid "invitation"
+msgstr "приглашение"
