@@ -64,7 +64,6 @@ class Notification(Component):
 
     def render_value(self, label=None, value=None):
         label = label or self.value
-        print(label)
         return ': '.join([
             capfirst(str(label)),
             value or self.props.get(label.string)])

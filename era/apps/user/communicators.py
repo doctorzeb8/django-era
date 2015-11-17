@@ -13,6 +13,7 @@ class Communicator:
         raise NotImplementedError
 
     def send(self, request, subject, component, **props):
+        self.request = request
         return self.communicate(
             subject,
             component().as_string(request, **dict(
@@ -20,13 +21,21 @@ class Communicator:
 
 
 class EmailCommunicator(Communicator):
+    def get_from(self):
+        return '{0} <{1}>'.format(str(settings.TITLE), settings.EMAIL_HOST_USER)
+
+    def get_connection(self):
+        return {}
+
     def communicate(self, subj, text):
         return send_mail(
             capfirst(subj),
             '' if not self.display_html else text,
-            '{0} <{1}>'.format(str(settings.TITLE), settings.EMAIL_HOST_USER),
+            self.get_from(),
             [self.user.email],
-            **({} if not self.display_html else {'html_message': text}))
+            **dict(
+                {} if not self.display_html else {'html_message': text},
+                **self.get_connection()))
 
 
 class CommunicationMixin:
