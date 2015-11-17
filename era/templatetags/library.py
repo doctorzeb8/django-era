@@ -21,10 +21,9 @@ register.era = lambda cls: register.tag(normalize(cls.__name__), cls)
 class Import(ClassyTag):
     def __init__(self, parser, tokens):
         for module in tokens.contents.split(' ')[1:]:
-            path = '.'.join(chain(
-                [module.split('.')[0]],
-                ['components'],
-                [] if not '.' in module else module.split('.')[1:]))
+            path = '.'.join(
+                [module, 'components'] if not module.startswith('.') else \
+                [module.split('.')[1], 'components'] + module.split('.')[2:])
             try:
                 parser.tags.update(import_module(path).register.tags)
             except ImportError:

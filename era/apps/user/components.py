@@ -41,6 +41,8 @@ class BaseUsersMenu(UserModelMixin, AuthMenu):
 
 @register.era
 class Logo(Link):
+    inline = True
+
     def resolve_props(self):
         return {
             'host': True,
