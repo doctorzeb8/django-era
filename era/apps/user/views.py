@@ -91,7 +91,7 @@ class AuthRequestView(
     back_button_url = 'login'
 
 
-class LoginView(LoginMixin, HistoryNavigationMixin, AuthFormMixin, FormView):
+class LoginView(LoginMixin, AuthFormMixin, FormView):
     form_class = LoginForm
 
     @property
@@ -115,7 +115,6 @@ class LoginView(LoginMixin, HistoryNavigationMixin, AuthFormMixin, FormView):
                 'level': 'danger',
                 'link': 'reset'
             }])
-        result.append(self.get_back_action())
         return result
 
     def process_valid(self, form, **kw):
