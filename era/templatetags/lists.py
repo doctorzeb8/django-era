@@ -3,7 +3,7 @@ from django.core.urlresolvers import resolve
 
 from ..utils.functools import call, unpack_args, factual, pick, first
 from ..utils.translation.string import _
-from .library import Component, Tag
+from .library import Component, Tag, ScriptedTag
 from .markup import MarkedList, Break, Link, Icon, Caption, Column, Panel, Table
 from .forms import Action
 
@@ -128,31 +128,12 @@ class Paginator(MarkedList):
             self.render_arrow('next', 'right')]
 
 
-class SearchLine(Tag):
+class SearchLine(ScriptedTag):
     el = 'input'
     nobody = True
 
     def resolve_attrs(self):
-        return {'class': 'form-control', 'id': 'search-line', 'placeholder': _('Search')}
-
-    def DOM(self):
-        return ''.join([
-            super().DOM(),
-            '''
-            <script>
-            $("#search-line").val($.query.get('search'));
-            $("#search-line").keypress(function (e) {
-                if (e.which == 13) {
-                    var value = $(this).val();
-                    if (value) {
-                        window.location.search = $.query.set("search", value);
-                    } else {
-                        window.location.search = $.query.REMOVE("search");
-                    }
-                }
-            })
-            </script>
-            '''])
+        return {'class': 'form-control', 'placeholder': _('Search')}
 
 
 class ChangeList(Component):

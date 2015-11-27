@@ -1,5 +1,6 @@
 from importlib import import_module
 from itertools import chain
+import json
 import re
 
 from classytags.arguments import MultiKeywordArgument
@@ -213,6 +214,10 @@ class Tag(ComplexComponent):
     inline = False
     named = True
 
+    @property
+    def root(self):
+        return Tag
+
     def get_nodelist(self):
         return self.props.nodelist
 
@@ -220,11 +225,11 @@ class Tag(ComplexComponent):
         return {}
 
     def resolve_node_name(self):
-        return self.named and ' '.join(map(
+        return ' '.join(map(
             lambda cls: normalize(cls.__name__),
             filter(
                 lambda cls: getattr(cls, 'named', False),
-                self.__class__.__mro__[:self.__class__.__mro__.index(Tag)])))
+                self.__class__.__mro__[:self.__class__.__mro__.index(self.root)])))
 
     def resolve_tag(self):
         attrs = dict(
@@ -234,7 +239,7 @@ class Tag(ComplexComponent):
             lambda k, v: v, {
             'id': self.props.get('id'),
             'class': ' '.join(factual([
-                self.resolve_node_name(),
+                self.named and self.resolve_node_name(),
                 attrs.get('class', ''),
                 self.props.get('class', '')]))}))
         return {
@@ -261,10 +266,41 @@ class Tag(ComplexComponent):
         pass
 
 
+class ScriptedTag(Tag):
+    script = ''
+
+    @property
+    def root(self):
+        return ScriptedTag
+
+    def resolve_script(self):
+        return {}
+
+    def DOM(self):
+        return super().DOM() + self.inject(
+            Tag, {'el': 'script'}, '$(function() {{{0}}})'.format(
+                ''.join([
+                    self.script or self.__class__.__name__,
+                    '({0})'.format(', '.join([
+                        '\'.{0}\''.format(self.resolve_node_name().split(' ')[-1]),
+                        json.dumps(self.resolve_script())]))])))
+
+
+@register.era
+class Display(Component):
+    def resolve_props(self):
+        return {'cls': self.context['components'].get(self.props.component, None)}
+
+    def DOM(self):
+        if self.props.cls:
+            return self.show(self.props.cls)
+        return ''
+
+
 @register.era
 class Content(Tag):
     el = 'main'
     inline = True
 
-    def DOM(self):
-        return self.inject(self.context['components'].get('content', None))
+    def get_nodelist(self):
+        return self.show(Display, {'component': 'content'})

@@ -6,7 +6,7 @@ from django.template.defaulttags import CsrfTokenNode
 from ..forms import EmptyWidget, DateTimePicker
 from ..utils.functools import call, unpack_args, factual, pluck, separate, \
     case, pick, omit, truthful
-from .library import register, Component, Tag
+from .library import register, Component, Tag, ScriptedTag
 from .markup import Row, Column, Table, Link, Button, Caption, Panel, Icon
 
 
@@ -180,7 +180,7 @@ class Action(Tag):
 
 
 @register.era
-class Form(Tag, FieldsetMixin):
+class Form(ScriptedTag, FieldsetMixin):
     el = 'form'
     inline = True
     named = False
@@ -278,18 +278,14 @@ class Form(Tag, FieldsetMixin):
                 lambda action: self.inject(Action, action),
                 self.props.actions)))
 
-    def render_submit(self):
-        return '' if not self.props.spinner else '''
-        <script>
-            $(function() {
-                $('form[action="%s"]').submit(function(event) {
-                    $(this).find('.actions').html('%s');
-                })
-            })
-        </script>''' % (self.props.action, self.inject(Icon, {
-            'name': self.props.spinner,
-            'spin': True,
-            'large': True}))
+    def resolve_script(self):
+        result = pick(self.props, 'spinner', 'action')
+        if self.props.spinner:
+            result['spinner'] = self.inject(Icon, {
+                'name': self.props.spinner,
+                'spin': True,
+                'large': True})
+        return result
 
     def get_nodelist(self):
         return ''.join(chain(
@@ -298,7 +294,7 @@ class Form(Tag, FieldsetMixin):
                 lambda content: '' if not content else \
                     self.props.inline and content or \
                     self.inject(Row, {}, content),
-                self.build(('fields', 'relations', 'formsets', 'actions', 'submit')))))
+                self.build(('fields', 'relations', 'formsets', 'actions')))))
 
     def resolve_attrs(self):
         return dict(
