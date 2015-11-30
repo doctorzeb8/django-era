@@ -1,2 +1,6 @@
-recursive-include era/templates *.html
-recursive-include era/static *
+include LICENSE.txt
+include README.md
+
+recursive-include era *
+recursive-exclude era __pycache__
+recursive-exclude * *.py[cod]
