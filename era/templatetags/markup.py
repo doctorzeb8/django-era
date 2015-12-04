@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from django.utils.text import capfirst
 from urllib.parse import urlencode
 
-from ..utils.functools import just, call, factual, reduce_dict, omit, pick, truthful
+from ..utils.functools import just, call, unpack_args, factual, reduce_dict, omit, pick, truthful
 from ..utils.translation import _
 from .library import register, Import, Component, ComplexComponent, Tag
 
@@ -243,13 +243,64 @@ class Panel(Tag):
     def resolve_attrs(self):
         return {'class': 'panel-' + self.props.level}
 
+    def render_heading(self, **kw):
+        return self.inject(
+            Tag, dict({'class': 'panel-heading'}, **kw), self.inject(
+                Tag,
+                {'el': 'h4', 'class': 'panel-title'},
+                self.inject(Caption, self.props.caption)))
+
+    def render_body(self, **kw):
+        return self.inject(
+            Tag, dict({'class': 'panel-body'}, **kw), self.props.body)
+
     def get_nodelist(self):
         return ''.join([
-            '' if not self.props.title else self.inject(
-                Tag, {'class': 'panel-heading'}, self.inject(
-                    Tag, {'name': 'h3'}, self.props.title)),
-            self.inject(
-                Tag, {'class': 'panel-body'}, self.props.body)])
+            '' if not self.props.caption else self.render_heading(),
+            self.render_body()])
+
+
+class CollapsiblePanel(Panel):
+    named = False
+
+    def resolve_props(self):
+        return {
+            'class': 'panel',
+            'href': ''.join([self.props.prefix, str(self.props.pk)])}
+
+    def get_defaults(self):
+        return dict(super().get_defaults(), collapse=None)
+
+    def render_heading(self, **kw):
+        return super().render_heading(**{'attrs': {
+            'class': 'collapsed' if not self.props.collapse else '',
+            'href': '#' + self.props.href,
+            'data-toggle': 'collapse',
+            'data-parent': '#' + str(self.props.parent)}})
+
+    def render_body(self, **kw):
+        return self.show(
+            Tag,
+            {'attrs': {
+                'id': self.props.href,
+                'class': ' '.join(factual(
+                    ['panel-collapse', 'collapse', self.props.collapse]))}},
+            super().render_body())
+
+
+class Accordion(Tag):
+    def get_defaults(self):
+        return {'id': 'accordion', 'class': 'panel-group'}
+
+    def get_nodelist(self):
+        return ''.join(map(
+            unpack_args(lambda i, obj: self.show(
+                CollapsiblePanel, dict({
+                    'collapse': i == 0 and 'in',
+                    'parent': self.props.id,
+                    'prefix': self.props.prefix},
+                    **pick(obj, 'pk', 'caption', 'body')))),
+            enumerate(self.get_objects())))
 
 
 @register.era

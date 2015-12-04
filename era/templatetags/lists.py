@@ -64,15 +64,16 @@ class QuerySetFilter(Panel):
             str(self.props.title),
             '' if len(self.props.choices) == 1 else self.render_clear()])
 
-    def render_body(self):
+    def render_keys(self):
         return self.inject(
             Break, {'join': map(
                 unpack_args(self.render_key),
                 self.props.choices)})
 
     def resolve_props(self):
-        parts = ['title', 'body']
-        return dict(zip(parts, self.build(parts)))
+        return {
+            'caption': {'title': self.render_title()},
+            'body': self.render_keys()}
 
 
 class SortableTable(Table):

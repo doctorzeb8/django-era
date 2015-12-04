@@ -250,12 +250,12 @@ class Form(ScriptedTag, FieldsetMixin):
             result = ''.join(self.render_fieldset(
                 self.props.form,
                 **pick(self.props, 'inline')))
-        return self.render_panel(title=self.props.title, body=result)
+        return self.render_panel(caption={'title': self.props.title}, body=result)
 
     def render_relations(self):
         return ''.join(map(
             lambda relation: self.render_panel(
-                title=relation['field'].verbose_name,
+                caption={'title': relation['field'].verbose_name},
                 body=''.join(self.render_fieldset(
                     relation['form'],
                     set_required=not relation['field'].blank))),
@@ -264,7 +264,7 @@ class Form(ScriptedTag, FieldsetMixin):
     def render_formsets(self):
         return ''.join(map(
             lambda formset: self.render_panel(
-                title=formset.model._meta.verbose_name_plural,
+                caption={'title': formset.model._meta.verbose_name_plural},
                 body=''.join([
                     str(formset.management_form),
                     self.inject(Formset, {'formset': formset})])),
