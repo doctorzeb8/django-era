@@ -18,12 +18,15 @@ ul {list-style: none; padding: 0px;}
 .form-control {border-radius: 5px;}
 .form-control[readonly] {background-color: inherit; cursor: context-menu;}
 .form-group {position: relative;}
+form.condensed {max-width: 500px; padding: 0px 30px; margin: auto;}
+form .actions {text-align: center;}
+form .action button {width: 60%; margin-top: 10px;}
 
 /* Lists */
 .list-panel {padding-top: 5px;}
 .list-panel input {margin: 10px 0px;}
 .list-panel button {width: 100%; margin-bottom: 10px;}
-.list-panel i.fa {margin-top: 5px;}
+.list-panel .panel-title i.fa {text-align: right;}
 .pager li span {margin: 10px;}
 
 /* Tables */
