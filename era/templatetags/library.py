@@ -10,7 +10,7 @@ from django.template import Library, TemplateSyntaxError
 from django.template.loader import render_to_string
 
 from ..utils.functools import call, unpack_args, filter_dict, reduce_dict, map_values, \
-    truthful, factual, pick, omit
+    truthful, factual, pick, omit, factual
 from ..utils.translation import normalize
 from ..utils.urls import resolve, get_site_url
 
@@ -267,23 +267,26 @@ class Tag(ComplexComponent):
 
 
 class ScriptedTag(Tag):
-    script = ''
-
     @property
     def root(self):
         return ScriptedTag
+
+    def get_script(self):
+        return self.__class__.__name__
 
     def resolve_script(self):
         return {}
 
     def DOM(self):
-        return super().DOM() + self.inject(
-            Tag, {'el': 'script'}, '$(function() {{{0}}})'.format(
-                ''.join([
-                    self.script or self.__class__.__name__,
-                    '({0})'.format(', '.join([
-                        '\'.{0}\''.format(self.resolve_node_name().split(' ')[-1]),
-                        json.dumps(self.resolve_script())]))])))
+        return ''.join(factual([
+            super().DOM(),
+            self.get_script() is not None and self.inject(
+                Tag, {'el': 'script'}, '$(function() {{{0}}})'.format(
+                    ''.join([
+                        self.get_script(),
+                        '({0})'.format(', '.join([
+                            '\'.{0}\''.format(self.resolve_node_name().split(' ')[-1]),
+                            json.dumps(self.resolve_script())]))])))]))
 
 
 @register.era
