@@ -3,7 +3,7 @@ from django.core.urlresolvers import reverse
 from django.utils.text import capfirst
 from urllib.parse import urlencode
 
-from ..utils.functools import just, call, unpack_args, factual, reduce_dict, omit, pick, truthful
+from ..utils.functools import just, call, factual, reduce_dict, omit, pick, truthful
 from ..utils.translation import _
 from .library import register, Import, Component, ComplexComponent, Tag
 
@@ -224,11 +224,16 @@ class Well(Tag):
 class Caption(Tag):
     el = 'span'
 
+    def resolve_props(self):
+        if not isinstance(self.props.icon, dict):
+            return {'icon': {'name': self.props.icon}}
+        return {}
+
     def get_nodelist(self):
         if not 'icon' in self.props:
             return self.props.title
         return ''.join([
-            self.inject(Icon, {'name': self.props.icon}),
+            self.inject(Icon, self.props.icon),
             self.inject(Tag, {'el': 'span'}, self.props.get(
                 'title', self.props.nodelist))])
 
@@ -238,38 +243,45 @@ class Panel(Tag):
     parts = ['title', 'body']
 
     def get_defaults(self):
-        return {'level': 'default', 'title': False}
+        return {'level': 'default'}
 
     def resolve_attrs(self):
         return {'class': 'panel-' + self.props.level}
+
+    def resolve_props(self):
+        return {
+            'class': 'panel',
+            'has_heading': bool(self.props.get('title', self.props.get('caption')))}
 
     def render_heading(self, **kw):
         return self.inject(
             Tag, dict({'class': 'panel-heading'}, **kw), self.inject(
                 Tag,
                 {'el': 'h4', 'class': 'panel-title'},
-                self.inject(Caption, self.props.caption)))
+                self.props.get('title', self.inject(Caption, self.props.caption))))
 
     def render_body(self, **kw):
         return self.inject(
             Tag, dict({'class': 'panel-body'}, **kw), self.props.body)
 
     def get_nodelist(self):
-        return ''.join([
-            '' if not self.props.caption else self.render_heading(),
-            self.render_body()])
+        return ''.join(factual([
+            self.props.has_heading and self.render_heading(),
+            self.render_body()]))
 
 
 class CollapsiblePanel(Panel):
     named = False
 
-    def resolve_props(self):
-        return {
-            'class': 'panel',
-            'href': ''.join([self.props.prefix, str(self.props.pk)])}
-
     def get_defaults(self):
-        return dict(super().get_defaults(), collapse=None)
+        return dict(
+            super().get_defaults(),
+            collapse=None)
+
+    def resolve_props(self):
+        return dict(
+            super().resolve_props(),
+            href=''.join([self.props.prefix, str(self.props.pk)]))
 
     def render_heading(self, **kw):
         return super().render_heading(**{'attrs': {
@@ -289,18 +301,30 @@ class CollapsiblePanel(Panel):
 
 
 class Accordion(Tag):
+    panel = CollapsiblePanel
+
+    def open_gen(self):
+        yield True
+        while True: yield False
+
     def get_defaults(self):
-        return {'id': 'accordion', 'class': 'panel-group'}
+        return {
+            'id': 'accordion',
+            'class': 'panel-group',
+            'open': self.open_gen()}
+
+    def check_is_open(self, obj):
+        return next(self.props.open)
 
     def get_nodelist(self):
         return ''.join(map(
-            unpack_args(lambda i, obj: self.show(
-                CollapsiblePanel, dict({
-                    'collapse': i == 0 and 'in',
+            lambda obj: self.show(
+                self.panel, dict({
+                    'collapse': self.check_is_open(obj) and 'in',
                     'parent': self.props.id,
                     'prefix': self.props.prefix},
-                    **pick(obj, 'pk', 'caption', 'body')))),
-            enumerate(self.get_objects())))
+                    **pick(obj, 'pk', 'caption', 'body'))),
+            self.get_objects()))
 
 
 @register.era
