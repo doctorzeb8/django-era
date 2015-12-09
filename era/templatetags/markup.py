@@ -225,7 +225,7 @@ class Caption(Tag):
     el = 'span'
 
     def resolve_props(self):
-        if not isinstance(self.props.icon, dict):
+        if isinstance(self.props.get('icon'), str):
             return {'icon': {'name': self.props.icon}}
         return {}
 
