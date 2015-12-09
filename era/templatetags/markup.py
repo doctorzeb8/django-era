@@ -258,7 +258,7 @@ class Panel(Tag):
             Tag, dict({'class': 'panel-heading'}, **kw), self.inject(
                 Tag,
                 {'el': 'h4', 'class': 'panel-title'},
-                self.props.get('title', self.inject(Caption, self.props.caption))))
+                self.props.get('title') or self.inject(Caption, self.props.caption)))
 
     def render_body(self, **kw):
         return self.inject(
@@ -274,9 +274,7 @@ class CollapsiblePanel(Panel):
     named = False
 
     def get_defaults(self):
-        return dict(
-            super().get_defaults(),
-            collapse=None)
+        return dict(super().get_defaults(), collapse=None)
 
     def resolve_props(self):
         return dict(
