@@ -71,9 +71,9 @@ class QuerySetFilter(Panel):
                 self.props.choices)})
 
     def resolve_props(self):
-        return {
+        return dict(super().resolve_props(), **{
             'caption': {'title': self.render_title()},
-            'body': self.render_keys()}
+            'body': self.render_keys()})
 
 
 class SortableTable(Table):

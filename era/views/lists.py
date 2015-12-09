@@ -12,7 +12,7 @@ from django.utils.functional import cached_property
 from django.views.generic.list import BaseListView
 
 from ..components import ChangeList
-from ..utils.functools import just, call, first, pluck, pick, \
+from ..utils.functools import just, call, first, pluck, pick, omit, \
     map_keys, map_values, reduce_dict, filter_dict
 from ..utils.translation import _, get_string, get_model_names, verbose_choices
 from .base import BaseView
@@ -59,7 +59,7 @@ class ListView(BaseView, BaseListView):
         if isinstance(obj, self.model) and hasattr(self, method):
             return getattr(self, method)(obj)
         elif model:
-            return call(getattr(obj, method, lambda: getattr(obj, field)))
+            return getattr(obj, method, lambda **kw: getattr(obj, field))(request=self.request)
         raise AttributeError('Missing display data for "{0}"'.format(field))
 
     def display_column(self, field):
@@ -84,13 +84,20 @@ class ListView(BaseView, BaseListView):
                 return value.count()
             return value
 
-    def display_objects(self, objects):
+    def display_objects(self, objects, **kw):
+        if 'model' in kw:
+            model = self.model
+            self.model = kw['model']
+            result = self.display_objects(objects, **omit(kw, 'model'))
+            self.model = model
+            return result
+
         return list(map(
             lambda obj: dict({'pk': obj.pk}, **dict(map(
                 lambda c: (
                     self.get_column_key(c),
                     self.display_field(c, self.get_model_field(c), obj)),
-                self.columns))),
+                kw.get('columns') or self.columns))),
             objects))
 
 
