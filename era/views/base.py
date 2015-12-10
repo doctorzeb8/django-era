@@ -65,3 +65,15 @@ class BaseView(BaseViewMixin, TemplateResponseMixin, View):
 
     def get_template_names(self):
         return list(map(lambda x: x + '.html', [self.about, 'index']))
+
+
+class DisplayAttrMixin:
+    def display_attr(self, obj, attr, **kw):
+        method = 'get_{0}_display'.format(attr)
+        if isinstance(obj, self.model) and hasattr(self, method):
+            return getattr(self, method)(obj)
+        elif kw.get('model', True):
+            return getattr(obj, method, lambda **kw: getattr(obj, attr))(request=self.request)
+        elif kw.get('direct', False):
+            return getattr(obj, attr)
+        raise AttributeError('Missing display data for "{0}"'.format(attr))

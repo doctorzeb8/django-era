@@ -15,10 +15,10 @@ from ..components import ChangeList
 from ..utils.functools import just, call, first, pluck, pick, omit, \
     map_keys, map_values, reduce_dict, filter_dict
 from ..utils.translation import _, get_string, get_model_names, verbose_choices
-from .base import BaseView
+from .base import BaseView, DisplayAttrMixin
 
 
-class ListView(BaseView, BaseListView):
+class ListView(DisplayAttrMixin, BaseView, BaseListView):
     list_display = []
 
     @property
@@ -54,14 +54,6 @@ class ListView(BaseView, BaseListView):
     def get_list_view(self, op, value=None):
         return value or getattr(self, 'list_' + op)
 
-    def lookup_field_display(self, obj, field, model=True):
-        method = 'get_{0}_display'.format(field)
-        if isinstance(obj, self.model) and hasattr(self, method):
-            return getattr(self, method)(obj)
-        elif model:
-            return getattr(obj, method, lambda **kw: getattr(obj, field))(request=self.request)
-        raise AttributeError('Missing display data for "{0}"'.format(field))
-
     def display_column(self, field):
         if isinstance(field, dict):
             return field['name']
@@ -72,26 +64,19 @@ class ListView(BaseView, BaseListView):
 
     def display_field(self, name, field, obj):
         if isinstance(field, dict):
-            return self.lookup_field_display(
+            return self.display_attr(
                 obj,
                 get_string(field['name']).replace(' ', '_'),
                 model=False)
         elif '__' in get_string(name):
-            return self.lookup_field(obj, name, end_obj=self.lookup_field_display)
+            return self.lookup_field(obj, name, end_obj=self.display_attr)
         else:
-            value = self.lookup_field_display(obj, field.name)
+            value = self.display_attr(obj, field.name)
             if isinstance(field, ManyToOneRel) and not isinstance(value, str):
                 return value.count()
             return value
 
     def display_objects(self, objects, **kw):
-        if 'model' in kw:
-            model = self.model
-            self.model = kw['model']
-            result = self.display_objects(objects, **omit(kw, 'model'))
-            self.model = model
-            return result
-
         return list(map(
             lambda obj: dict({'pk': obj.pk}, **dict(map(
                 lambda c: (
