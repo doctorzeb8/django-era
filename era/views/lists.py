@@ -148,8 +148,8 @@ class CollectionView(ListView):
                             self.request.GET)))))
 
     def get_queryset(self, ignore_state=False, ignore_attrs=None):
-        qs = self.model.objects.all() if self.queryset is None else self.queryset
         if not ignore_state and self.stateful:
+            qs = self.queryset or self.model.objects.all()
             if self.states['filter']:
                 qs = qs.filter(**filter_dict(
                     lambda k, v: not k in (ignore_attrs or []),
@@ -166,7 +166,8 @@ class CollectionView(ListView):
                 qs = qs.order_by(*reduce_dict(
                     lambda k, v: ('-' if v is False else '') + k,
                     self.states['sort']))
-        return qs
+            return qs
+        return super().get_queryset()
 
     def resolve_generic_filter(self, attr, choices, state):
         result = {'key': self.map_attr(attr)}
