@@ -10,7 +10,7 @@ from .forms import Action
 
 class QuerySetKey(Link):
     def get_defaults(self):
-        return dict(super().get_defaults(), replace=False, clean=[])
+        return dict(super().get_defaults(), replace=False, collapse=False, clean=[])
 
     def get_url(self):
         qd = self.request.GET.copy()
@@ -39,30 +39,33 @@ class QuerySetKey(Link):
 
     def DOM(self):
         if not self.props.attrs:
-            return self.props.nodelist
+            if not self.props.collapse:
+                return self.props.nodelist
+            return ''
         return super().DOM()
 
 
 class QuerySetFilter(Panel):
     def render_key(self, value, name, count=None):
         return self.inject(
-            QuerySetKey, {
+            QuerySetKey, dict({
                 'method': 'filter',
                 'key': self.props.key,
                 'clean': ['page'],
-                'value': value},
+                'value': value,
+                'collapse': value is None}),
             ' '.join([
                 str(name),
                 '({0})'.format(count) if self.props.counters and count else '']))
 
     def render_clear(self):
+        if len(self.props.choices) == 1:
+            return ''
         return self.render_key(None, self.inject(
-            Icon, {'name': 'remove', 'class': 'pull-right'}))
+            Icon, {'name': 'remove', 'class': 'qs-clear pull-right'}))
 
     def render_title(self):
-        return ''.join([
-            str(self.props.title),
-            '' if len(self.props.choices) == 1 else self.render_clear()])
+        return ''.join([str(self.props.title), self.render_clear()])
 
     def render_keys(self):
         return self.inject(
@@ -72,7 +75,7 @@ class QuerySetFilter(Panel):
 
     def resolve_props(self):
         return dict(super().resolve_props(), **{
-            'caption': {'title': self.render_title()},
+            'title': self.render_title(),
             'body': self.render_keys()})
 
 

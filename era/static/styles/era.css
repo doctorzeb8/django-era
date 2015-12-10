@@ -26,7 +26,7 @@ form .action button {width: 60%; margin-top: 10px;}
 .list-panel {padding-top: 5px;}
 .list-panel input {margin: 10px 0px;}
 .list-panel button {width: 100%; margin-bottom: 10px;}
-.list-panel .panel-title i.fa {text-align: right;}
+.list-panel .panel-title .qs-clear:hover {font-weight: bold;}
 .pager li span {margin: 10px;}
 
 /* Tables */
