@@ -72,8 +72,8 @@ class DisplayAttrMixin:
         method = 'get_{0}_display'.format(attr)
         if isinstance(obj, self.model) and hasattr(self, method):
             return getattr(self, method)(obj)
-        elif kw.get('model', True):
-            return getattr(obj, method, lambda **kw: getattr(obj, attr))(request=self.request)
-        elif kw.get('direct', False):
+        elif kw.get('model', True) and hasattr(obj, method):
+            return getattr(obj, method)()
+        elif kw.get('direct', True):
             return getattr(obj, attr)
         raise AttributeError('Missing display data for "{0}"'.format(attr))
