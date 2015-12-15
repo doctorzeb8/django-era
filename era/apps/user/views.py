@@ -147,6 +147,10 @@ class ProfileView(UserMixin, LoginMixin, FormView):
     def get_instance(self):
         return self.request.user
 
+    def prepare_form(self, form):
+        form.fields['password'].required = False
+        return form
+
     def process_valid(self, form, **kw):
         if form.cleaned_data['password']:
             self.set_password(form)

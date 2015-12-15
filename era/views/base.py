@@ -35,12 +35,16 @@ class BaseViewMixin:
 
 
 class BaseView(BaseViewMixin, TemplateResponseMixin, View):
+    decorators = []
     components = {}
     page_title = settings.TITLE
 
     @dispatch_decorator
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
+
+    def get_decorators(self):
+        return self.decorators
 
     def get(self, request, *args, **kwargs):
         return getattr(super(),  'get', lambda r: None)(request) \

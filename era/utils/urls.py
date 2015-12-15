@@ -78,7 +78,7 @@ def dispatch_decorator(fnx, view, request, *args, **kwargs):
     decorator = reduce(
         lambda seq, fny: fny(seq),
         reversed(list(chain(
-            getattr(view, 'decorators', []),
+            view.get_decorators(),
             [lambda req, *a, **kw: fnx(view, req, *a, **kw)]))))
     return decorator(request, *args, **kwargs)
 
