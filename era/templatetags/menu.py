@@ -135,7 +135,7 @@ class Menu(Tag):
             props = dict({
                 'link': {},
                 'nodelist': '',
-                'active': bool(active_items)},
+                'active': item.get('active') or bool(active_items)},
                 **pick(item, 'caption', 'attrs', 'link', 'caret'))
 
             display = first(props['active'] and active_items or include_items)
