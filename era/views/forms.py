@@ -3,7 +3,7 @@ from itertools import chain
 from urllib.parse import unquote
 
 from django.core.urlresolvers import reverse
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.db.models import OneToOneField
 from django.forms import Form as EmptyForm
 from django.forms.fields import DateField, DateTimeField, TimeField
@@ -68,12 +68,16 @@ class ModelFormMixin(FormFieldsOverridesMixin):
         return list(model._meta.get_field(field).choices)
 
     def get_relation_fields(self):
-        return [] if not self.model else filter(
-            lambda field: isinstance(field, OneToOneField),
-            factual(map(
-                lambda field: field in self.model._meta.get_all_field_names() \
-                    and self.model._meta.get_field(field) or None,
-                self.get_fields())))
+        result = []
+        if self.model:
+            for field_name in self.get_fields():
+                try:
+                    field = self.model._meta.get_field(field_name)
+                    if isinstance(field, OneToOneField):
+                        result.append(field)
+                except FieldDoesNotExist:
+                    pass
+        return result
 
     def get_form_class(self):
         if self.form_class:
