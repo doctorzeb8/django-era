@@ -35,7 +35,7 @@ class Slider(forms.widgets.TextInput):
 class FrozenSelect(forms.widgets.Select):
     def render(self, name, value, attrs=None, choices=()):
         return ''.join([
-            str(list(filter(lambda c: c[0] == value, self.choices))[0][1]),
+            first([x[1] for x in self.choices if str(x[0]) == str(value)]),
             forms.widgets.HiddenInput().render(name, value)])
 
 

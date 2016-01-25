@@ -64,8 +64,11 @@ class ModelFormMixin(FormFieldsOverridesMixin):
         return self.form_class and self.form_class._meta.fields \
             or getattr(self, 'fields', self.get_model_fields())
 
-    def get_choices(self, model, field):
-        return list(model._meta.get_field(field).choices)
+    def get_choices(self, model, field_name):
+        field = model._meta.get_field(field_name)
+        if hasattr(field, 'rel'):
+            return [(obj.pk, str(obj)) for obj in field.rel.to.objects.all()]
+        return list(field.choices)
 
     def get_relation_fields(self):
         result = []
@@ -129,32 +132,11 @@ class FormsetsMixin(ModelFormMixin):
     def get_formsets(self):
         return []
 
-    def get_matrix_queryset(self, factory):
-        if hasattr(factory, 'fk'):
-            return factory.model.objects.filter(**{factory.fk.name: self.instance})
-        else:
-            return factory.model.objects.all()
-
-    def fill_matrix(self, factory, prefix, fields):
-        get_qs = getattr(self, 'get_{0}_queryset'.format(prefix), self.get_matrix_queryset)
-        choices = dict(map(
-            lambda field: (field, list(filter(
-                lambda choice: not choice in list(map(
-                    lambda instance: getattr(instance, field),
-                    get_qs(factory))),
-                map(first, self.get_choices(factory.model, field))))),
-            fields))
-        return list(map(
-            lambda i: map_values(lambda c: c and select(i, c), choices),
-            range(0, factory.max_num)))
-
     def get_formset_factory(self, formset_model, **kw):
         if 'matrix' in kw:
-            max_num = max(map(
-                lambda field: len(self.get_choices(formset_model, field)),
-                kw['matrix']))
-            kw = dict({k: max_num for k in ('extra', 'max_num')}, **kw)
-            kw['widgets'] = {f: FrozenSelect() for f in kw.pop('matrix', [])}
+            max_num = len(self.get_choices(formset_model, kw['matrix']))
+            kw = dict({k: max_num for k in kw.pop('auto_num', ('extra', 'max_num'))}, **kw)
+            kw['widgets'] = {kw.pop('matrix'): FrozenSelect()}
         if not 'fields' in kw and not 'form' in kw:
             kw['fields'] = self.get_model_fields(formset_model)
         if not 'constructor' in kw:
@@ -164,8 +146,9 @@ class FormsetsMixin(ModelFormMixin):
     def get_formset_data(self, factory, **kw):
         result = self.get_form_data(instance=self.instance, **kw)
         if 'matrix' in kw:
-            result['initial'] = self.fill_matrix(factory, kw['prefix'], kw['matrix'])
-            #import ipdb; ipdb.set_trace()
+            result['initial'] = list(map(
+                lambda choice: {kw['matrix']: choice[0]},
+                self.get_choices(factory.model, kw['matrix'])))
         return result
 
     def inline_formset(self, formset_model, **kw):
@@ -305,7 +288,7 @@ class MatrixView(FormView):
             lambda matrix: self.inline_formset(
                 matrix[0],
                 constructor=modelformset_factory,
-                matrix=matrix[1:]),
+                matrix=matrix[1]),
             self.models))
 
     def save_formsets(self, form, *formsets):
