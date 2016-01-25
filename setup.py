@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-era',
-    version='1.3.6',
+    version='1.3.7',
     author='doctorzeb8',
     author_email='doctorzeb8@gmail.com',
     url='https://github.com/doctorzeb8/django-era',
@@ -27,7 +27,7 @@ setup(
     keywords='django framework cbv components react',
     classifiers=[
         'License :: OSI Approved :: MIT License',
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 3 - Alpha',
         'Environment :: Web Environment',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.2',
