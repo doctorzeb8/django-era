@@ -154,6 +154,7 @@ class ProfileView(UserMixin, LoginMixin, FormView):
     def process_valid(self, form, **kw):
         if form.cleaned_data['password']:
             self.set_password(form)
+            form.instance.save()
             return self.process_login(auth.authenticate(**dict(
                 self.request.user.username_dict,
                 password=form.cleaned_data['password'])))

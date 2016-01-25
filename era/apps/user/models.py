@@ -24,8 +24,8 @@ class BaseUser(CommunicationMixin, AbstractBaseUser):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('date joined'))
     access = models.BooleanField(_('access'), default=True)
 
-    email = models.EmailField(verbose_name=_('email'), unique=True)
-    name = models.CharField(verbose_name=_('name'), max_length=20)
+    email = models.EmailField(verbose_name=_('email'), unique=True, null=True)
+    name = models.CharField(verbose_name=_('username'), max_length=20, null=True)
     role = models.CharField(
         verbose_name=_('role'),
         max_length=10,

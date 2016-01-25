@@ -16,7 +16,7 @@ class NonUniqueMixin:
 class LoginForm(NonUniqueMixin, forms.ModelForm):
     class Meta:
         model = get_user_model()
-        fields = ('email', 'password')
+        fields = (user_field, 'password')
         widgets = {'password': forms.PasswordInput()}
 
 

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-11-14 13:21+0800\n"
-"PO-Revision-Date: 2015-11-14 13:27+0800\n"
+"PO-Revision-Date: 2015-12-30 15:24+0800\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -17,7 +17,7 @@ msgstr ""
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
 "Last-Translator: \n"
 "Language-Team: \n"
-"X-Generator: Poedit 1.8.2\n"
+"X-Generator: Poedit 1.8.6\n"
 
 #: components.py:26 components.py:111 views.py:104
 msgid "login"
@@ -80,8 +80,8 @@ msgid "email"
 msgstr "почта"
 
 #: models.py:28
-msgid "name"
-msgstr "имя"
+msgid "username"
+msgstr "имя пользователя"
 
 #: models.py:30
 msgid "role"
