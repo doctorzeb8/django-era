@@ -296,7 +296,7 @@ class Display(Component):
 
     def DOM(self):
         if self.props.cls:
-            return self.show(self.props.cls)
+            return self.show(self.props.cls, omit(self.props, 'component', 'cls'))
         return ''
 
 
