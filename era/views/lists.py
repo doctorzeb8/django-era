@@ -87,6 +87,7 @@ class ListView(DisplayAttrMixin, BaseView, BaseListView):
 
 
 class CollectionView(ListView):
+    autochoice = True
     components = {'content': ChangeList}
     list_filter = []
     list_counters = []
@@ -181,7 +182,7 @@ class CollectionView(ListView):
                     lambda obj: (obj.pk, str(obj)),
                     field.rel.to.objects.all()),
                 state)
-        elif hasattr(field, 'choices'):
+        elif getattr(field, 'choices', []):
             result = self.resolve_generic_filter(
                 attr,
                 state is not None and field.choices,
@@ -247,7 +248,7 @@ class CollectionView(ListView):
                 kw = {}
                 if 'filters' in default_state:
                     for f in self.resolve_filters(state=False):
-                        if len(f['choices']) == 1:
+                        if self.autochoice and len(f['choices']) == 1:
                             kw[self.map_state(f['key'])] = f['choices'][0][0]
                         elif f['key'] in default_state['filters']:
                             kw[self.map_state(f['key'])] = default_state['filters'][f['key']]

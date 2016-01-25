@@ -59,7 +59,7 @@ class QuerySetFilter(Panel):
                 '({0})'.format(count) if self.props.counters and count else '']))
 
     def render_clear(self):
-        if len(self.props.choices) == 1:
+        if not self.props.get('ignore_length', False) and len(self.props.choices) == 1:
             return ''
         return self.render_key(None, self.inject(
             Icon, {'name': 'remove', 'class': 'qs-clear pull-right'}))
