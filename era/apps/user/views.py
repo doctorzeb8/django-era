@@ -148,6 +148,7 @@ class ProfileView(UserMixin, LoginMixin, FormView):
         return self.request.user
 
     def prepare_form(self, form):
+        form = super().prepare_form(form)
         form.fields['password'].required = False
         return form
 
