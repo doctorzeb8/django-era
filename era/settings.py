@@ -57,7 +57,7 @@ BOWER_INSTALLED_APPS = [
     'bootstrap',
     'seiyria-bootstrap-slider',
     'eonasdan-bootstrap-datetimepicker',
-    'fontawesome',
+    'font-awesome',
     'jquery-query-object'
 ]
 

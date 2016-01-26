@@ -67,7 +67,7 @@ class ModelFormMixin(FormFieldsOverridesMixin):
 
     def get_choices(self, model, field_name):
         field = model._meta.get_field(field_name)
-        if hasattr(field, 'rel'):
+        if getattr(field, 'rel', None):
             return [(obj.pk, str(obj)) for obj in field.rel.to.objects.all()]
         return list(field.choices)
 
