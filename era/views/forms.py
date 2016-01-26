@@ -2,6 +2,7 @@ from functools import reduce
 from itertools import chain
 from urllib.parse import unquote
 
+from django.contrib.contenttypes.forms import BaseGenericInlineFormSet
 from django.core.urlresolvers import reverse
 from django.core.exceptions import ObjectDoesNotExist, FieldDoesNotExist
 from django.db.models import OneToOneField
@@ -141,6 +142,19 @@ class FormsetsMixin(ModelFormMixin):
             kw['fields'] = self.get_model_fields(formset_model)
         if not 'constructor' in kw:
             kw['parent_model'] = kw.pop('model', self.model)
+        if hasattr(formset_model, 'content_object'):
+            ct_field = kw.pop('ct_field', 'content_type')
+            fk_field = kw.pop('fk_field', 'object_id')
+            result = modelformset_factory(
+                formset_model,
+                formset=BaseGenericInlineFormSet,
+                exclude=(ct_field, fk_field),
+                **omit(kw, 'parent_model', 'for_concrete_model'))
+            options = formset_model._meta
+            result.ct_field = options.get_field(ct_field)
+            result.ct_fk_field = options.get_field(fk_field)
+            result.for_concrete_model = kw.get('for_concrete_model', True)
+            return result
         return kw.pop('constructor', inlineformset_factory)(model=formset_model, **kw)
 
     def get_formset_data(self, factory, **kw):
