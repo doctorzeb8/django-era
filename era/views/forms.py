@@ -160,9 +160,14 @@ class FormsetsMixin(ModelFormMixin):
     def get_formset_data(self, factory, **kw):
         result = self.get_form_data(instance=self.instance, **kw)
         if 'matrix' in kw:
+            exclude = [] if not hasattr(factory, 'fk') else list(map(
+                lambda obj: getattr(obj, kw['matrix']),
+                factory.model.objects.filter(**{factory.fk.name: self.instance})))
             result['initial'] = list(map(
-                lambda choice: {kw['matrix']: choice[0]},
-                self.get_choices(factory.model, kw['matrix'])))
+                lambda choice: {kw['matrix']: choice},
+                filter(
+                    lambda choice: not choice in exclude,
+                    map(first, self.get_choices(factory.model, kw['matrix'])))))
         return result
 
     def inline_formset(self, formset_model, **kw):
