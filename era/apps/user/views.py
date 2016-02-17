@@ -128,6 +128,9 @@ class LoginView(LoginMixin, AuthFormMixin, FormView):
             self.send_message('error', _('sorry, invalid credentials'))
         return self.reload()
 
+    def get_success_redirect(self, **kw):
+        return self.request.GET.get('next', super().get_success_redirect(**kw))
+
 
 class LogoutView(RedirectView):
     decorators = [login_required]
