@@ -1,6 +1,7 @@
 import os
 import sys
 import django
+from .utils.functools import just
 
 DEBUG = True
 TEMPLATE_DEBUG = DEBUG
@@ -14,6 +15,7 @@ BASE_DIR = os.path.join(os.path.dirname(os.path.dirname(sys.modules.get('app')._
 CODENAME = os.path.basename(os.path.abspath(BASE_DIR))
 INDEX_VIEW = 'app.views.IndexView'
 MODULES = ['app']
+ERA_COLLECTIONS = {'reference': just}
 
 USE_I18N = True
 LOCALE_PATHS = (

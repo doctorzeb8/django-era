@@ -1,7 +1,8 @@
 from itertools import chain
+from django.conf import settings
 from django.core.urlresolvers import resolve
 
-from ..utils.functools import call, unpack_args, factual, pick, first
+from ..utils.functools import call, unpack_args, factual, just, pick, first
 from ..utils.translation.string import _
 from .library import Component, Tag, ScriptedTag
 from .markup import MarkedList, Break, Link, Icon, Caption, Column, Panel, Table
@@ -142,7 +143,7 @@ class SearchLine(ScriptedTag):
 
 class ChangeList(Component):
     def resolve_props(self):
-        return self.context.dicts[2]
+        return dict(self.context.dicts[2], **settings.ERA_COLLECTIONS)
 
     def get_location_qs(self):
         return {'next': self.request.get_full_path()}
@@ -192,6 +193,6 @@ class ChangeList(Component):
         return ''.join(chain(*self.build(('actions', 'search', 'filters'))))
 
     def DOM(self):
-        return ''.join([
+        return ''.join(self.props.reference([
             self.inject(Column, {'md': 9, 'class': 'list-qs'}, self.render_queryset()),
-            self.inject(Column, {'md': 3, 'class': 'list-panel'}, self.render_panel())])
+            self.inject(Column, {'md': 3, 'class': 'list-panel'}, self.render_panel())]))
