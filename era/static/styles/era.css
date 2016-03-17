@@ -14,6 +14,9 @@ ul {list-style: none; padding: 0px;}
 .stretched {width: 100%;}
 .no-indent {margin: 0px; padding: 0px;}
 
+/* Buttons */
+.btn-link {outline: none !important;}
+
 /* Forms */
 .form-control {border-radius: 5px;}
 .form-control[readonly] {background-color: inherit; cursor: context-menu;}
