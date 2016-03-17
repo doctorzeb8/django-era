@@ -5,6 +5,7 @@ from django.contrib import auth
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import get_hasher, make_password
+from django.forms import PasswordInput
 
 from era import _, random_str
 from era.views import RedirectView, FormView, CollectionView, ObjectView
@@ -12,7 +13,8 @@ from era.utils.functools import factual, pick
 
 from .components import JoinNotification, ResetNotification, InviteNotification
 from .decorators import role_required
-from .forms import LoginForm, ProfileForm, JoinForm, ResetForm, ConfirmForm, UserForm
+from .forms import LoginForm, ProfileForm, JoinForm, ResetForm, ConfirmForm, UserForm, \
+    new_password_input
 from .models import Confirm
 
 
@@ -65,9 +67,6 @@ class LoginMixin:
             self.send_message('error', _('sorry, access denied'))
             return self.navigate('login')
 
-    def get_success_message(self, **kw):
-        return _('welcome {username}').format(username=str(self.request.user))
-
 
 class HistoryNavigationMixin:
     back_button_url = 'index'
@@ -76,7 +75,7 @@ class HistoryNavigationMixin:
         return {
             'icon': 'chevron-left',
             'title': _('back'),
-            'level': 'warning',
+            'level': 'link',
             'link': self.back_button_url}
 
 
@@ -85,8 +84,7 @@ class AuthFormMixin:
     form_props = {'class': 'condensed'}
 
 
-class AuthRequestView(
-    UserMixin, ConfirmationMixin, HistoryNavigationMixin, AuthFormMixin, FormView):
+class AuthRequestView(UserMixin, HistoryNavigationMixin, AuthFormMixin, FormView):
     long_term = True
     back_button_url = 'login'
 
@@ -94,28 +92,21 @@ class AuthRequestView(
 class LoginView(LoginMixin, AuthFormMixin, FormView):
     form_class = LoginForm
 
-    @property
-    def has_comm(self):
-        return get_user_model().get_communicator(user=None) is not None
-
     def get_actions(self):
-        result = [{
-                'icon': 'sign-in',
-                'title': _('login'),
-                'level': 'success'}]
-        if self.has_comm:
-            result.extend([{
-                'icon': 'user-plus',
-                'title': _('join'),
-                'level': 'default',
-                'link': 'join'
+        return [{
+            'icon': 'sign-in',
+            'title': _('login'),
+            'level': 'success'
             }, {
-                'icon': 'unlock',
-                'title': _('unlock'),
-                'level': 'danger',
-                'link': 'reset'
-            }])
-        return result
+            'icon': 'user-plus',
+            'title': _('join'),
+            'level': 'link',
+            'link': 'join'
+            }, {
+            'icon': 'unlock',
+            'title': _('unlock'),
+            'level': 'link',
+            'link': 'reset'}]
 
     def process_valid(self, form, **kw):
         user = auth.authenticate(**form.cleaned_data)
@@ -130,6 +121,9 @@ class LoginView(LoginMixin, AuthFormMixin, FormView):
 
     def get_success_redirect(self, **kw):
         return self.request.GET.get('next', super().get_success_redirect(**kw))
+
+    def get_success_message(self, **kw):
+        return _('welcome {username}').format(username=self.request.user.get_short_name())
 
 
 class LogoutView(RedirectView):
@@ -168,7 +162,21 @@ class ProfileView(UserMixin, LoginMixin, FormView):
         return _('your profile was updated successfully')
 
 
-class JoinView(AuthRequestView):
+class RegistrationMixin(ConfirmationMixin):
+    notification = JoinNotification
+
+    def send_invite(self, form, password):
+        return form.instance.comm.send(
+            self.request,
+            _('registration'),
+            self.notification,
+            code=self.create_confirmation(
+                form.instance,
+                'registration',
+                password))
+
+
+class JoinView(RegistrationMixin, AuthRequestView):
     form_class = JoinForm
     success_redirect = 'confirm'
     success_message = _('confirmation code has been sent')
@@ -196,21 +204,22 @@ class JoinView(AuthRequestView):
         form.instance.role = settings.USER_ROLES[-1].string
         self.set_password(form)
         super().save_form(form)
-        form.instance.comm.send(
-            self.request,
-            _('registration'),
-            JoinNotification,
-            code=self.create_confirmation(
-                form.instance,
-                'registration',
-                form.cleaned_data['password']))
+        self.send_invite(form, form.cleaned_data['password'])
 
 
-class ResetView(AuthRequestView):
+class ResetView(ConfirmationMixin, AuthRequestView):
     form_class = ResetForm
+    notification = ResetNotification
     success_redirect = 'unlock'
     success_message = _('confirmation code has been sent')
-    actions = [{'icon': 'send', 'title': _('request'), 'level': 'success'}]
+    actions = []
+
+    def get(self, *args, **kw):
+        self.send_message('info', _('please set new password and confirm it by code'))
+        return super().get(*args, **kw)
+
+    def get_actions(self):
+        return [{'icon': 'send', 'title': _('request'), 'level': 'success'}, self.get_back_action()]
 
     def process_valid(self, form, **kw):
         user = self.get_user(form)
@@ -219,7 +228,7 @@ class ResetView(AuthRequestView):
             user.comm.send(
                 self.request,
                 _('access restoration'),
-                ResetNotification,
+                self.notification,
                 code=self.create_confirmation(
                     user,
                     'password',
@@ -235,13 +244,24 @@ class ConfirmView(LoginMixin, AuthFormMixin, FormView):
     repeat_url = 'join'
     update_password = False
 
+    def get(self, *args, **kw):
+        if self.request.user.is_authenticated():
+            auth.logout(self.request)
+            return self.reload()
+        return super().get(*args, **kw)
+
     def get_initial(self):
         return pick(self.request.GET, 'code')
 
     def get_actions(self):
-        return [
-            {'icon': 'check', 'title': _('submit'), 'level': 'success'},
-            {'icon': 'refresh', 'title': _('repeat'), 'level': 'default', 'link': self.repeat_url}]
+        result = [{'icon': 'check', 'title': _('submit'), 'level': 'success'}]
+        if not 'code' in self.request.GET:
+            result.append({
+                'icon': 'refresh',
+                'title': _('repeat'),
+                'level': 'link',
+                'link': self.repeat_url})
+        return result
 
     def process_valid(self, form, **kw):
         confirm = Confirm.objects \
@@ -281,25 +301,42 @@ class BaseUsersView(UserManagerMixin, CollectionView):
     default_state = {'filters': {'access': True}}
 
 
-class BaseUserView(PasswordMixin, UserManagerMixin, ObjectView):
-    form_class = UserForm
-    form_props = {'class': 'condensed'}
+class InvitationMixin(PasswordMixin):
+    notification = InviteNotification
 
     def send_invite(self, form, password):
         return form.instance.comm.send(
             self.request,
             _('invitation'),
-            InviteNotification,
+            self.notification,
             password=password)
 
     def save_form(self, form):
         if not form.instance.pk:
             password = form.cleaned_data['password'] or self.gen_password()
             form.instance.set_password(password)
-            form.instance.comm and self.send_invite(form, password)
+            super().save_form(form)
+            self.send_invite(form, password)
         else:
             self.set_password(form)
-        super().save_form(form)
+            super().save_form(form)
+
+
+class PasswordWidgetMixin:
+    def prepare_form(self, form):
+        form = super().prepare_form(form)
+        form.fields['password'].required = False
+        if self.instance:
+            form.fields['password'].widget = new_password_input
+        else:
+            form.fields['password'].widget = PasswordInput({
+                'placeholder': _('leave blank for random')})
+        return form
+
+
+class BaseUserView(UserManagerMixin, PasswordWidgetMixin, InvitationMixin, ObjectView):
+    form_class = UserForm
+    form_props = {'class': 'condensed'}
 
 
 class UsersView(BaseUsersView): pass

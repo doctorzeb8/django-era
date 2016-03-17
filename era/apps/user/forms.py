@@ -55,12 +55,3 @@ class UserForm(forms.ModelForm):
     class Meta:
         model = get_user_model()
         fields = (user_field, 'role', 'name', 'password', 'access')
-
-    def __init__(self, *args, **kw):
-        super().__init__(*args, **kw)
-        self.fields['password'].required = False
-        if self.instance.pk:
-            self.fields['password'].widget = new_password_input
-        else:
-            self.fields['password'].widget = forms.PasswordInput({
-                'placeholder': _('leave blank for random')})

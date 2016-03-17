@@ -6,11 +6,7 @@ urlpatterns = package_patterns(
     __package__,
     'login',
     'logout',
-    'profile')
-
-if get_user_model().get_communicator(user=None) is not None:
-    urlpatterns += package_patterns(
-    __package__,
+    'profile',
     'join',
     'reset',
     'confirm',

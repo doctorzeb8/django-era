@@ -47,5 +47,5 @@ class CommunicationMixin:
 
     @classmethod
     def get_communicator(cls, **kw):
-        if cls.USERNAME_FIELD == 'email' and settings.EMAIL_HOST_USER:
+        if cls.USERNAME_FIELD == 'email':
             return EmailCommunicator(**kw)

@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2015-11-14 13:21+0800\n"
-"PO-Revision-Date: 2015-12-30 15:24+0800\n"
+"PO-Revision-Date: 2016-03-08 07:30+0800\n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -102,11 +102,11 @@ msgstr "назад"
 
 #: views.py:109
 msgid "join"
-msgstr "присоединиться"
+msgstr "регистрация"
 
 #: views.py:114
 msgid "unlock"
-msgstr "разблокировать"
+msgstr "восстановить пароль"
 
 #: views.py:125
 msgid "sorry, unconfirmed data"
@@ -138,7 +138,13 @@ msgstr "регистрация"
 
 #: views.py:205
 msgid "request"
-msgstr "запросить"
+msgstr "отправить код подтверждения"
+
+#: views.py:209
+msgid "please set new password and confirm it by code"
+msgstr ""
+"пожалуйста, укажите адрес электронной почты, который вы использовали при "
+"создании аккаунта и новый пароль."
 
 #: views.py:213
 msgid "access restoration"

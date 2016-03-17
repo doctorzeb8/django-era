@@ -25,7 +25,7 @@ class AuthMenu(Menu):
             return [{
                 'caption': {'icon': 'sign-in', 'title': _('login')},
                 'link': {'url': 'login'},
-                'active': self.check_active('login', 'recovery', 'confirm')}]
+                'active': self.check_active('login', 'join', 'reset', 'unlock', 'confirm')}]
         return [{
             'caption': {'icon': 'user', 'title': _('profile')},
             'link': {'url': 'profile'}

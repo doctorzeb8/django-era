@@ -41,3 +41,6 @@ class BaseUser(CommunicationMixin, AbstractBaseUser):
 
     def __str__(self):
         return '{0} <{1}>'.format(self.name, self.username_value)
+
+    def get_short_name(self):
+        return self.name
