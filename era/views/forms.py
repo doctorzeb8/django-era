@@ -113,7 +113,7 @@ class ModelFormMixin(FormFieldsOverridesMixin):
             **self.get_form_data(
                 prefix=field.name,
                 instance=getattr(self.instance, field.name, None)))
-        return {'field': field, 'form': form}
+        return {'field': field, 'form': form, 'required': not field.blank}
 
     def get_relations(self):
         return factual(map(

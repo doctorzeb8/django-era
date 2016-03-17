@@ -256,9 +256,10 @@ class Form(ScriptedTag, FieldsetMixin):
         return ''.join(map(
             lambda relation: self.render_panel(
                 caption={'title': relation['field'].verbose_name},
-                body=''.join(self.render_fieldset(
-                    relation['form'],
-                    set_required=not relation['field'].blank))),
+                body=''.join(
+                    self.render_fieldset(
+                        relation['form'],
+                        set_required=relation['required']))),
             self.props.relations))
 
     def render_formsets(self):
