@@ -13,6 +13,9 @@ class Icon(Tag):
     el = 'i'
     inline = True
 
+    def get_defaults(self):
+        return {'fixed': True, 'nodelist': ''}
+
     def resolve_attrs(self):
         return {
             'class': ' '.join(chain(
@@ -200,6 +203,9 @@ class Alert(Tag):
 
     def resolve_attrs(self):
         return {'class': 'alert-' + self.props.level}
+
+    def get_nodelist(self):
+        return self.show(Tag, {'el': 'span'}, super().get_nodelist())
 
     def tweak(self):
         super().tweak()

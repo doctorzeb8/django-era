@@ -272,6 +272,8 @@ class ScriptedTag(Tag):
         return ScriptedTag
 
     def get_script(self):
+        if 'script' in self.props:
+            return self.props.script
         return self.__class__.__name__
 
     def resolve_script(self):
