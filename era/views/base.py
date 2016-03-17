@@ -31,7 +31,7 @@ class BaseViewMixin:
         return redirect(reverse(name))
 
     def reload(self):
-        return self.navigate(self.url_match.url_name)
+        return redirect(self.request.get_full_path())
 
 
 class BaseView(BaseViewMixin, TemplateResponseMixin, View):
