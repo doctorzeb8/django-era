@@ -82,8 +82,13 @@ class DateTimePicker(forms.widgets.DateTimeBaseInput):
 
     def render(self, name, value, attrs):
         return ''.join([
-            super().render(name, value, dict(attrs, readonly='readonly')),
-            '<script>$("#{0}").datetimepicker({1});</script>'.format(
+            super().render(name, value, attrs),
+            '''
+            <script>
+            $("#{0}").datetimepicker({1});
+            $("#{0}").keydown(function(e) {{e.preventDefault()}});
+            </script>
+            '''.format(
                 attrs['id'], json.dumps(dict({
                     'icons': self.get_icons(),
                     'locale': translation.get_language(),
