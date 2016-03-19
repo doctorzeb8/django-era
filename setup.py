@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='django-era',
-    version='1.4.5',
+    version='1.4.6',
     author='doctorzeb8',
     author_email='doctorzeb8@gmail.com',
     url='https://github.com/doctorzeb8/django-era',

@@ -204,7 +204,8 @@ class TemplateComponent(Component):
     template = 'index.html'
 
     def render_dom(self):
-        return render_to_string(self.template, self.props, self.context)
+        self.context.update(self.props)
+        return render_to_string(self.template, self.context)
 
 
 @register.era
