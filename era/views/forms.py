@@ -31,11 +31,11 @@ class FormFieldsOverridesMixin:
 
     def override_form_fields(self, form):
         overrides = self.get_formfields_overrides()
-        for field in form:
-            match = overrides.get(field.field.__class__, None)
+        for field in form.fields.values():
+            match = overrides.get(field.__class__, None)
             if match:
                 Widget, kw = match
-                field.field.widget = Widget(**kw)
+                field.widget = Widget(**kw)
 
 
 class ModelFormMixin(FormFieldsOverridesMixin):

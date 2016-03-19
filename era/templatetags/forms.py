@@ -241,7 +241,7 @@ class Form(ScriptedTag, FieldsetMixin):
             result = ''.join(map(
                 lambda column: self.inject(
                     Column,
-                    {'md': int(12 / len(columns))},
+                    {'md': int(12 / len(columns)), 'xs': 12},
                     ''.join(self.render_fieldset(
                         column,
                         **pick(self.props, 'inline')))),
