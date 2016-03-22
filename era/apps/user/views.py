@@ -71,6 +71,11 @@ class LoginMixin:
             return self.navigate('login')
 
 
+class WelcomeMixin:
+    def get_success_message(self, **kw):
+        return _('welcome {username}').format(username=self.request.user.get_short_name())
+
+
 class HistoryNavigationMixin:
     back_button_url = 'index'
 
@@ -92,7 +97,7 @@ class AuthRequestView(UserMixin, HistoryNavigationMixin, AuthFormMixin, FormView
     back_button_url = 'login'
 
 
-class LoginView(AnonymousMixin, LoginMixin, AuthFormMixin, FormView):
+class LoginView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormView):
     form_class = LoginForm
 
     def get_actions(self):
@@ -124,9 +129,6 @@ class LoginView(AnonymousMixin, LoginMixin, AuthFormMixin, FormView):
 
     def get_success_redirect(self, **kw):
         return self.request.GET.get('next', super().get_success_redirect(**kw))
-
-    def get_success_message(self, **kw):
-        return _('welcome {username}').format(username=self.request.user.get_short_name())
 
 
 class LogoutView(RedirectView):
@@ -242,7 +244,7 @@ class ResetView(AnonymousMixin, ConfirmationMixin, AuthRequestView):
             return self.reload()
 
 
-class ConfirmView(AnonymousMixin, LoginMixin, AuthFormMixin, FormView):
+class ConfirmView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormView):
     form_class = ConfirmForm
     repeat_url = 'join'
     update_password = False
