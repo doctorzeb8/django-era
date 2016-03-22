@@ -3,7 +3,6 @@ import string
 from django.conf import settings
 from django.contrib import auth
 from django.contrib.auth import get_user_model
-from django.contrib.auth.decorators import login_required
 from django.contrib.auth.hashers import get_hasher, make_password
 from django.forms import PasswordInput
 
@@ -12,10 +11,14 @@ from era.views import RedirectView, FormView, CollectionView, ObjectView
 from era.utils.functools import factual, pick
 
 from .components import JoinNotification, ResetNotification, InviteNotification
-from .decorators import role_required
+from .decorators import login_required, anonymous_required, role_required
 from .forms import LoginForm, ProfileForm, JoinForm, ResetForm, ConfirmForm, UserForm, \
     new_password_input
 from .models import Confirm
+
+
+class AnonymousMixin:
+    decorators = [anonymous_required]
 
 
 class PasswordMixin:
@@ -89,7 +92,7 @@ class AuthRequestView(UserMixin, HistoryNavigationMixin, AuthFormMixin, FormView
     back_button_url = 'login'
 
 
-class LoginView(LoginMixin, AuthFormMixin, FormView):
+class LoginView(AnonymousMixin, LoginMixin, AuthFormMixin, FormView):
     form_class = LoginForm
 
     def get_actions(self):
@@ -176,7 +179,7 @@ class RegistrationMixin(ConfirmationMixin):
                 password))
 
 
-class JoinView(RegistrationMixin, AuthRequestView):
+class JoinView(AnonymousMixin, RegistrationMixin, AuthRequestView):
     form_class = JoinForm
     success_redirect = 'confirm'
     success_message = _('confirmation code has been sent')
@@ -207,7 +210,7 @@ class JoinView(RegistrationMixin, AuthRequestView):
         self.send_invite(form, form.cleaned_data['password'])
 
 
-class ResetView(ConfirmationMixin, AuthRequestView):
+class ResetView(AnonymousMixin, ConfirmationMixin, AuthRequestView):
     form_class = ResetForm
     notification = ResetNotification
     success_redirect = 'unlock'
@@ -239,16 +242,10 @@ class ResetView(ConfirmationMixin, AuthRequestView):
             return self.reload()
 
 
-class ConfirmView(LoginMixin, AuthFormMixin, FormView):
+class ConfirmView(AnonymousMixin, LoginMixin, AuthFormMixin, FormView):
     form_class = ConfirmForm
     repeat_url = 'join'
     update_password = False
-
-    def get(self, *args, **kw):
-        if self.request.user.is_authenticated():
-            auth.logout(self.request)
-            return self.reload()
-        return super().get(*args, **kw)
 
     def get_initial(self):
         return pick(self.request.GET, 'code')
