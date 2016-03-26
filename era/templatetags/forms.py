@@ -1,9 +1,9 @@
 from itertools import chain
 from django.forms import widgets
-from django.forms.widgets import TextInput, Textarea, CheckboxInput, NumberInput
+from django.forms.widgets import CheckboxInput
 from django.template.defaulttags import CsrfTokenNode
 
-from ..forms import EmptyWidget, DateTimePicker
+from ..forms import EmptyWidget
 from ..utils.functools import call, unpack_args, factual, pluck, separate, \
     case, pick, omit, truthful
 from .library import register, Component, Tag, ScriptedTag
@@ -11,19 +11,24 @@ from .markup import Row, Column, Table, Link, Button, Caption, Panel, Icon
 
 
 class WidgetCaseMixin:
+    def get_widgets(self, *args):
+        return list(map(lambda x: getattr(widgets, x), args))
+
+    def check_widget_in(self, *args):
+        return self.props.field.field.widget.__class__ in self.get_widgets(*args)
+
     @property
     def is_text_input(self):
-        return self.check_widget_in(*list(chain([DateTimePicker], map(
-            lambda x: getattr(widgets, x), [
+        return getattr(
+            self.props.field.field.widget,
+            'is_text_input',
+            self.check_widget_in(
                 'TextInput', 'NumberInput', 'EmailInput',
-                'URLInput', 'PasswordInput', 'Textarea', 'Select']))))
+                'URLInput', 'PasswordInput', 'Textarea', 'Select'))
 
     @property
     def have_placeholder(self):
-        return self.check_widget_in(TextInput, Textarea, NumberInput)
-
-    def check_widget_in(self, *args):
-        return self.props.field.field.widget.__class__ in args
+        return self.check_widget_in('TextInput', 'Textarea', 'NumberInput')
 
 
 class RequiredAttrMixin:

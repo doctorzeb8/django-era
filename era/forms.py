@@ -40,6 +40,8 @@ class FrozenSelect(forms.widgets.Select):
 
 
 class DateTimePicker(forms.widgets.DateTimeBaseInput):
+    is_text_input = True
+
     class Media:
         css = {'all': [static(
             'eonasdan-bootstrap-datetimepicker/build/css/bootstrap-datetimepicker.min.css')]}
