@@ -7,7 +7,7 @@ urlpatterns = package_patterns(
     'login',
     'logout',
     'profile',
-    'join',
+    'registration',
     'reset',
     'confirm',
     'unlock')

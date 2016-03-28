@@ -56,7 +56,7 @@ class Logo(Link):
 
 
 class Notification(Component):
-    parts = ['logo', 'empty', 'value', 'link']
+    parts = []
 
     def get_parts(self):
         return self.parts
@@ -64,11 +64,8 @@ class Notification(Component):
     def render_empty(self):
         return ' '
 
-    def render_value(self, label=None, value=None):
-        label = label or self.value
-        return ': '.join([
-            capfirst(str(label)),
-            value or self.props.get(label.string)])
+    def render_value(self, label, value=None):
+        return ': '.join([capfirst(str(label)), value or self.props.get(label.string)])
 
     def render_logo(self):
         if self.props.user.comm.display_html:
@@ -85,28 +82,36 @@ class Notification(Component):
             self.get_parts())))
 
 
-class ConfirmationMixin:
-    value = _('code')
+class AuthNotification(Notification):
+    def get_parts(self):
+        result = ['logo', 'empty']
+        if 'code' in self.props:
+            result.append('code')
+        if 'password' in self.props:
+            result.append('password')
+        return result + ['link']
 
+    def render_code(self):
+        return self.render_value(_('code'))
+
+    def render_password(self):
+        return self.render_value(_('password'))
+
+    def render_link(self, **kw):
+        qs = {'code': self.props.code}
+        if 'password' in self.props:
+            qs['sign'] = self.props.password
+        return super().render_link(url=self.url_name, qs=qs, nodelist=_('confirm'))
+
+
+class InviteNotification(AuthNotification):
     def render_link(self):
-        return super().render_link(
-            url=self.url_name,
-            qs={'code': self.props.code},
-            nodelist=_('confirm'))
+        return super().render_link(url='login', nodelist=_('login'))
 
 
-class JoinNotification(ConfirmationMixin, Notification):
+class RegistrationNotification(AuthNotification):
     url_name = 'confirm'
 
 
-class ResetNotification(ConfirmationMixin, Notification):
+class ResetNotification(AuthNotification):
     url_name = 'unlock'
-
-
-class InviteNotification(Notification):
-    value = _('password')
-
-    def render_link(self):
-        return super().render_link(
-            url='login',
-            nodelist=_('login'))

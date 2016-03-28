@@ -1,104 +1,25 @@
 import string
 
+from django import forms
 from django.conf import settings
 from django.contrib import auth
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import get_hasher, make_password
-from django.forms import PasswordInput
+from django.contrib.auth.hashers import get_hasher
+from django.utils.text import capfirst
 
-from era import _, random_str
+from era import _
 from era.views import RedirectView, FormView, CollectionView, ObjectView
-from era.utils.functools import factual, pick
+from era.utils.functools import pick
 
-from .components import JoinNotification, ResetNotification, InviteNotification
-from .decorators import login_required, anonymous_required, role_required
-from .forms import LoginForm, ProfileForm, JoinForm, ResetForm, ConfirmForm, UserForm, \
-    new_password_input
+from .components import ResetNotification
+from .decorators import login_required, role_required
+from .mixins import AnonymousMixin, UserMixin, PasswordMixin, LoginMixin, WelcomeMixin, \
+    InvitationMixin, SignMixin
 from .models import Confirm
 
 
-class AnonymousMixin:
-    decorators = [anonymous_required]
-
-
-class PasswordMixin:
-    def gen_password(self, **kw):
-        return random_str(5, ''.join([
-            string.ascii_uppercase,
-            string.digits]), **kw)
-
-    def set_password(self, form):
-        if form.cleaned_data['password']:
-            form.instance.set_password(form.cleaned_data['password'])
-
-
-class UserMixin(PasswordMixin):
-    def get_user(self, form):
-        model = get_user_model()
-        return model.objects.filter(**pick(form.cleaned_data, model.USERNAME_FIELD)).first()
-
-
-class ConfirmationMixin:
-    def gen_code(self, salt=None):
-        hasher = get_hasher()
-        generate = True
-        while generate:
-            code = random_str()
-            encoded = hasher.encode(code, salt or hasher.salt())
-            generate = bool(Confirm.objects.filter(code=encoded).count())
-        return code, encoded
-
-    def create_confirmation(self, user, key, password):
-        code, encoded = self.gen_code(password)
-        Confirm.objects.create(
-            user=user,
-            key=key,
-            code=encoded,
-            sign=make_password(password))
-        return code
-
-
-class LoginMixin:
-    def get_access(self, user):
-        return user.access
-
-    def process_login(self, user):
-        if self.get_access(user):
-            auth.login(self.request, user)
-            return self.success_finish()
-        else:
-            self.send_message('error', _('sorry, access denied'))
-            return self.navigate('login')
-
-
-class WelcomeMixin:
-    def get_success_message(self, **kw):
-        return _('welcome {username}').format(username=self.request.user.get_short_name())
-
-
-class HistoryNavigationMixin:
-    back_button_url = 'index'
-
-    def get_back_action(self):
-        return {
-            'icon': 'chevron-left',
-            'title': _('back'),
-            'level': 'link',
-            'link': self.back_button_url}
-
-
-class AuthFormMixin:
-    keywords = ['auth']
-    form_props = {'class': 'condensed'}
-
-
-class AuthRequestView(UserMixin, HistoryNavigationMixin, AuthFormMixin, FormView):
-    long_term = True
-    back_button_url = 'login'
-
-
-class LoginView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormView):
-    form_class = LoginForm
+class LoginView(AnonymousMixin, UserMixin, LoginMixin, WelcomeMixin, FormView):
+    validate_unique = False
 
     def get_actions(self):
         return [{
@@ -109,12 +30,17 @@ class LoginView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormVie
             'icon': 'user-plus',
             'title': _('join'),
             'level': 'link',
-            'link': 'join'
+            'link': 'registration'
             }, {
             'icon': 'unlock',
             'title': _('unlock'),
             'level': 'link',
             'link': 'reset'}]
+
+    def prepare_form(self, form):
+        form = super().prepare_form(form)
+        form.fields['password'].widget = forms.PasswordInput()
+        return form
 
     def process_valid(self, form, **kw):
         user = auth.authenticate(**form.cleaned_data)
@@ -131,72 +57,17 @@ class LoginView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormVie
         return self.request.GET.get('next', super().get_success_redirect(**kw))
 
 
-class LogoutView(RedirectView):
-    decorators = [login_required]
-    permanent = True
-
-    def get_redirect_url(self):
-        auth.logout(self.request)
-        self.pattern_name = 'index'
-        return super().get_redirect_url()
-
-
-class ProfileView(UserMixin, LoginMixin, FormView):
-    decorators = [login_required]
-    form_class = ProfileForm
-    form_props = {'class': 'condensed'}
-
-    def get_instance(self):
-        return self.request.user
-
-    def prepare_form(self, form):
-        form = super().prepare_form(form)
-        form.fields['password'].required = False
-        return form
-
-    def process_valid(self, form, **kw):
-        if form.cleaned_data['password']:
-            self.set_password(form)
-            form.instance.save()
-            return self.process_login(auth.authenticate(**dict(
-                self.request.user.username_dict,
-                password=form.cleaned_data['password'])))
-        return super().process_valid(**dict(kw, form=form))
-
-    def get_success_message(self, **kw):
-        return _('your profile was updated successfully')
-
-
-class RegistrationMixin(ConfirmationMixin):
-    notification = JoinNotification
-
-    def send_invite(self, form, password):
-        return form.instance.comm.send(
-            self.request,
-            _('registration'),
-            self.notification,
-            code=self.create_confirmation(
-                form.instance,
-                'registration',
-                password))
-
-
-class JoinView(AnonymousMixin, RegistrationMixin, AuthRequestView):
-    form_class = JoinForm
+class RegistrationView(AnonymousMixin, SignMixin, FormView):
+    extra_fields = ['name', 'password']
+    validate_unique = False
+    confirm = 'registration'
     success_redirect = 'confirm'
-    success_message = _('confirmation code has been sent')
-
-    def get_actions(self):
-        return [{
-            'icon': 'check',
-            'title': _('submit'),
-            'level': 'success'
-        }, self.get_back_action()]
+    success_message = _('confirmation data has been sent')
 
     def process_valid(self, form, **kw):
         user = self.get_user(form)
         if user:
-            confirm = Confirm.objects.filter(user=user, key='registration').first()
+            confirm = self.get_confirmation(user).first()
             if confirm:
                 user.delete()
                 confirm.delete()
@@ -207,50 +78,61 @@ class JoinView(AnonymousMixin, RegistrationMixin, AuthRequestView):
 
     def save_form(self, form):
         form.instance.role = settings.USER_ROLES[-1].string
-        self.set_password(form)
         super().save_form(form)
-        self.send_invite(form, form.cleaned_data['password'])
 
 
-class ResetView(AnonymousMixin, ConfirmationMixin, AuthRequestView):
-    form_class = ResetForm
+class ResetView(AnonymousMixin, SignMixin, FormView):
+    validate_unique = False
     notification = ResetNotification
+    notification_message = _('access restoration')
     success_redirect = 'unlock'
-    success_message = _('confirmation code has been sent')
-    actions = []
 
     def get(self, *args, **kw):
         self.send_message('info', _('please set new password and confirm it by code'))
         return super().get(*args, **kw)
 
-    def get_actions(self):
-        return [{'icon': 'send', 'title': _('request'), 'level': 'success'}, self.get_back_action()]
+    def prepare_form(self, form):
+        form = super().prepare_form(form)
+        form.fields['password'].label = capfirst(self.password_messages['new'])
+        return form
 
     def process_valid(self, form, **kw):
         user = self.get_user(form)
         if user:
-            Confirm.objects.filter(user=user, key='password').delete()
-            user.comm.send(
-                self.request,
-                _('access restoration'),
-                self.notification,
-                code=self.create_confirmation(
-                    user,
-                    'password',
-                    form.cleaned_data['password']))
-            return self.success_finish()
+            self.get_confirmation(user).delete()
+            return super().process_valid(form=form, **kw)
         else:
             self.send_message('error', _('sorry, invalid credentials'))
             return self.reload()
 
+    def save_form(self, form):
+        self.send_notification(form)
 
-class ConfirmView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormView):
-    form_class = ConfirmForm
-    repeat_url = 'join'
-    update_password = False
 
-    def get_initial(self):
-        return pick(self.request.GET, 'code')
+class ConfirmView(AnonymousMixin, LoginMixin, WelcomeMixin, FormView):
+    model = Confirm
+    fields = ('code', 'sign')
+    repeat_url = 'registration'
+
+    def check(self, code, sign):
+        confirm = Confirm.objects.filter(code=get_hasher().encode(code, sign)).first()
+        if confirm:
+            confirm.user.password = confirm.sign
+            confirm.user.save()
+            user = confirm.user
+            confirm.delete()
+            return self.process_login(auth.authenticate(**dict(
+                user.username_dict,
+                password=sign)))
+        else:
+            self.send_message('error', _('sorry, invalid credentials'))
+        return False
+
+    def get(self, *args, **kw):
+        data = pick(self.request.GET, 'code', 'sign')
+        if 'code' in data and 'sign' in data:
+            return self.check(**data) or self.navigate('confirm')
+        return super().get(*args, **kw)
 
     def get_actions(self):
         result = [{'icon': 'check', 'title': _('submit'), 'level': 'success'}]
@@ -262,81 +144,77 @@ class ConfirmView(AnonymousMixin, LoginMixin, WelcomeMixin, AuthFormMixin, FormV
                 'link': self.repeat_url})
         return result
 
-    def process_valid(self, form, **kw):
-        confirm = Confirm.objects \
-            .filter(code=get_hasher().encode(
-                form.cleaned_data['code'],
-                form.cleaned_data['sign'])) \
-            .first()
-        if confirm:
-            if self.update_password:
-                confirm.user.password = confirm.sign
-                confirm.user.save()
-            user = confirm.user
-            confirm.delete()
-            return self.process_login(auth.authenticate(**dict(
-                user.username_dict,
-                password=form.cleaned_data['sign'])))
+    def prepare_form(self, form):
+        form = super().prepare_form(form)
+        if 'code' in self.request.GET:
+            form.fields['code'].widget = forms.HiddenInput(
+                attrs={'value': self.request.GET['code']})
         else:
-            self.send_message('error', _('sorry, invalid credentials'))
-        return self.reload()
+            form.fields['code'].label = capfirst(_('enter received code'))
+
+        if 'sign' in self.request.GET:
+            form.fields['sign'].label = capfirst(_('enter received password'))
+        else:
+            form.fields['sign'].label = capfirst(_('enter your password again'))
+        form.fields['sign'].widget = forms.PasswordInput()
+        return form
+
+    def process_valid(self, form, **kw):
+        return self.check(**pick(form.cleaned_data, 'code', 'sign')) or self.reload()
 
 
 class UnlockView(ConfirmView):
     repeat_url = 'reset'
-    update_password = True
 
 
-class UserManagerMixin:
+class UserView(InvitationMixin, ObjectView):
+    decorators = [login_required, role_required(allow=['developer'])]
+    extra_fields = ['role', 'name', 'password', 'access']
+    form_props = {'class': 'condensed'}
+
+
+class UsersView(CollectionView):
     decorators = [login_required, role_required(allow=['developer'])]
     model = get_user_model()
-
-
-class BaseUsersView(UserManagerMixin, CollectionView):
-    list_display = (get_user_model().USERNAME_FIELD, 'role', 'name', 'access')
+    list_display = (model.USERNAME_FIELD, 'role', 'name', 'access')
     list_filter = ('role', 'access')
     list_counters = ('role', )
     list_search = ('name', )
     default_state = {'filters': {'access': True}}
 
 
-class InvitationMixin(PasswordMixin):
-    notification = InviteNotification
-
-    def send_invite(self, form, password):
-        return form.instance.comm.send(
-            self.request,
-            _('invitation'),
-            self.notification,
-            password=password)
-
-    def save_form(self, form):
-        if not form.instance.pk:
-            password = form.cleaned_data['password'] or self.gen_password()
-            form.instance.set_password(password)
-            super().save_form(form)
-            self.send_invite(form, password)
-        else:
-            self.set_password(form)
-            super().save_form(form)
-
-
-class PasswordWidgetMixin:
-    def prepare_form(self, form):
-        form = super().prepare_form(form)
-        form.fields['password'].required = False
-        if self.instance:
-            form.fields['password'].widget = new_password_input
-        else:
-            form.fields['password'].widget = PasswordInput({
-                'placeholder': _('leave blank for random')})
-        return form
-
-
-class BaseUserView(UserManagerMixin, PasswordWidgetMixin, InvitationMixin, ObjectView):
-    form_class = UserForm
+class ProfileView(UserMixin, PasswordMixin, LoginMixin, FormView):
+    validate_unique = False
+    decorators = [login_required]
+    extra_fields = ['name', 'password']
     form_props = {'class': 'condensed'}
 
+    def get_instance(self):
+        return self.request.user
 
-class UsersView(BaseUsersView): pass
-class UserView(BaseUserView): pass
+    def prepare_form(self, form):
+        form = super().prepare_form(form)
+        form.fields[self.model.USERNAME_FIELD].widget = forms.TextInput(
+            attrs={'readonly': 'readonly'})
+        return form
+
+    def process_valid(self, form, **kw):
+        if 'password' in form.changed_data:
+            self.save_form(form)
+            return self.process_login(auth.authenticate(**dict(
+                self.request.user.username_dict,
+                password=form.cleaned_data['password'])))
+        return super().process_valid(**dict(kw, form=form))
+
+    def get_success_message(self, **kw):
+        return _('your profile was updated successfully')
+
+
+class LogoutView(RedirectView):
+    decorators = [login_required]
+    permanent = True
+
+    def get_redirect_url(self):
+        auth.logout(self.request)
+        self.pattern_name = 'index'
+        return super().get_redirect_url()

@@ -7,153 +7,161 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-14 13:21+0800\n"
-"PO-Revision-Date: 2016-03-08 07:30+0800\n"
+"POT-Creation-Date: 2016-03-25 15:46-0500\n"
+"PO-Revision-Date: 2016-03-26 04:47+0800\n"
+"Last-Translator: \n"
+"Language-Team: \n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && n"
 "%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
-"Last-Translator: \n"
-"Language-Team: \n"
 "X-Generator: Poedit 1.8.6\n"
 
-#: components.py:26 components.py:111 views.py:104
+#: user/components.py:26 user/components.py:109 user/views.py:29
 msgid "login"
 msgstr "вход"
 
-#: components.py:30
+#: user/components.py:30
 msgid "profile"
 msgstr "профиль"
 
-#: components.py:33
+#: user/components.py:33
 msgid "logout"
 msgstr "выход"
 
-#: components.py:88 models.py:12
+#: user/components.py:95 user/models.py:12
 msgid "code"
 msgstr "код"
 
-#: components.py:94
-msgid "confirm"
-msgstr "подтверждение"
-
-#: components.py:106
+#: user/components.py:98
 msgid "password"
 msgstr "пароль"
 
-#: forms.py:8
+#: user/components.py:104
+msgid "confirm"
+msgstr "подтвердить"
+
+#: user/mixins.py:30
 msgid "enter new password"
 msgstr "введите новый пароль"
 
-#: forms.py:51
-msgid "enter password again"
-msgstr "введите пароль еще раз"
-
-#: forms.py:66
+#: user/mixins.py:51
 msgid "leave blank for random"
 msgstr "оставьте пустым для случайного"
 
-#: models.py:13
-msgid "confirmation"
-msgstr "подтверждение"
-
-#: models.py:19
-msgid "user"
-msgstr "пользователь"
-
-#: models.py:20
-msgid "users"
-msgstr "пользователи"
-
-#: models.py:24
-msgid "date joined"
-msgstr "дата регистрации"
-
-#: models.py:25
-msgid "access"
-msgstr "доступ"
-
-#: models.py:27
-msgid "email"
-msgstr "почта"
-
-#: models.py:28
-msgid "username"
-msgstr "имя пользователя"
-
-#: models.py:30
-msgid "role"
-msgstr "роль"
-
-#: views.py:65
+#: user/mixins.py:76
 msgid "sorry, access denied"
 msgstr "извините, нет доступа"
 
-#: views.py:69
+#: user/mixins.py:82
 #, python-brace-format
 msgid "welcome {username}"
 msgstr "добро пожаловать, {username}."
 
-#: views.py:78
-msgid "back"
-msgstr "назад"
+#: user/mixins.py:87
+msgid "invitation"
+msgstr "приглашение"
 
-#: views.py:109
-msgid "join"
-msgstr "регистрация"
+#: user/mixins.py:105 user/views.py:64
+msgid "confirmation data has been sent"
+msgstr "данные для подтверждения высланы"
 
-#: views.py:114
-msgid "unlock"
-msgstr "восстановить пароль"
-
-#: views.py:125
-msgid "sorry, unconfirmed data"
-msgstr "извините, данные не подтверждены"
-
-#: views.py:129 views.py:221 views.py:254
-msgid "sorry, invalid credentials"
-msgstr "извините, неверные данные"
-
-#: views.py:160
-msgid "your profile was updated successfully"
-msgstr "ваши данные успешно обновлены"
-
-#: views.py:166 views.py:204
-msgid "confirmation code has been sent"
-msgstr "код подтверждения выслан"
-
-#: views.py:171 views.py:235
-msgid "submit"
-msgstr "подтвердить"
-
-#: views.py:183
-msgid "sorry, user with such data exists"
-msgstr "извините, такой пользователь уже существует"
-
-#: views.py:193
-msgid "registration"
-msgstr "регистрация"
-
-#: views.py:205
+#: user/mixins.py:109
 msgid "request"
 msgstr "отправить код подтверждения"
 
-#: views.py:209
+#: user/mixins.py:110
+msgid "back"
+msgstr "назад"
+
+#: user/models.py:13
+msgid "confirmation"
+msgstr "подтверждение"
+
+#: user/models.py:19
+msgid "user"
+msgstr "пользователь"
+
+#: user/models.py:20
+msgid "users"
+msgstr "пользователи"
+
+#: user/models.py:24
+msgid "date joined"
+msgstr "дата регистрации"
+
+#: user/models.py:25
+msgid "access"
+msgstr "доступ"
+
+#: user/models.py:27
+msgid "email"
+msgstr "почта"
+
+#: user/models.py:28
+msgid "username"
+msgstr "имя пользователя"
+
+#: user/models.py:30
+msgid "role"
+msgstr "роль"
+
+#: user/views.py:33
+msgid "join"
+msgstr "регистрация"
+
+#: user/views.py:38
+msgid "unlock"
+msgstr "восстановить пароль"
+
+#: user/views.py:46
+msgid "sorry, unconfirmed data"
+msgstr "извините, данные не подтверждены"
+
+#: user/views.py:50 user/views.py:102 user/views.py:126
+msgid "sorry, invalid credentials"
+msgstr "извините, неверные данные"
+
+#: user/views.py:62
+msgid "registration"
+msgstr "регистрация"
+
+#: user/views.py:74
+msgid "sorry, user with such data exists"
+msgstr "извините, такой пользователь уже существует"
+
+#: user/views.py:92
+msgid "access restoration"
+msgstr "восстановление доступа"
+
+#: user/views.py:96
 msgid "please set new password and confirm it by code"
 msgstr ""
 "пожалуйста, укажите адрес электронной почты, который вы использовали при "
 "создании аккаунта и новый пароль."
 
-#: views.py:213
-msgid "access restoration"
-msgstr "восстановление доступа"
+#: user/views.py:136
+msgid "submit"
+msgstr "подтвердить"
 
-#: views.py:236
+#: user/views.py:140
 msgid "repeat"
 msgstr "повторить"
 
-#: views.py:283
-msgid "invitation"
-msgstr "приглашение"
+#: user/views.py:151
+msgid "enter received code"
+msgstr "введите полученный код"
+
+#: user/views.py:154
+msgid "enter received password"
+msgstr "введите полученный пароль"
+
+#: user/views.py:156
+msgid "enter your password again"
+msgstr "введите пароль еще раз"
+
+#: user/views.py:206
+msgid "your profile was updated successfully"
+msgstr "ваши данные успешно обновлены"
