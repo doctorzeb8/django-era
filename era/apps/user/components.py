@@ -2,7 +2,7 @@ from django.conf import settings
 from django.utils.text import capfirst
 from era import _
 from era.components import register, TemplateComponent, Tag, Component, Break, Link, Image, Menu
-from era.utils.functools import factual
+from era.utils.functools import factual, pick
 from era.utils.translation.verbose import verbose_attr
 
 
@@ -98,15 +98,19 @@ class AuthNotification(Notification):
         return self.render_value(_('password'))
 
     def render_link(self, **kw):
-        qs = {'code': self.props.code}
-        if 'password' in self.props:
+        qs = pick(self.props, 'code')
+        if 'password' in self.props and 'code' in qs:
             qs['sign'] = self.props.password
-        return super().render_link(url=self.url_name, qs=qs, nodelist=_('confirm'))
+        if not 'nodelist' in kw:
+            kw['nodelist'] = _('confirm')
+        return super().render_link(url=self.url_name, qs=qs, **kw)
 
 
 class InviteNotification(AuthNotification):
-    def render_link(self):
-        return super().render_link(url='login', nodelist=_('login'))
+    url_name = 'login'
+
+    def render_link(self, **kw):
+        return super().render_link(nodelist=_('login'), **kw)
 
 
 class RegistrationNotification(AuthNotification):
