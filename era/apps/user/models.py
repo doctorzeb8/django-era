@@ -1,7 +1,9 @@
 from django.conf import settings
+from django.contrib.auth.hashers import get_hasher
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.validators import RegexValidator
 from django.db import models
+from era import random_str
 from era.utils.translation import _, verbose_choices
 from .communicators import CommunicationMixin
 
@@ -11,6 +13,16 @@ class Confirm(models.Model):
     key = models.CharField(max_length=30)
     code = models.CharField(max_length=128, verbose_name=_('code'), unique=True)
     sign = models.CharField(max_length=128, verbose_name=_('confirmation'))
+
+    @classmethod
+    def gen_code(cls, salt=None):
+        hasher = get_hasher()
+        generate = True
+        while generate:
+            code = random_str()
+            encoded = hasher.encode(code, salt or hasher.salt())
+            generate = bool(cls.objects.filter(code=encoded).count())
+        return code, encoded
 
 
 class BaseUser(CommunicationMixin, AbstractBaseUser):

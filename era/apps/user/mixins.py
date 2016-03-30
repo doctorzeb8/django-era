@@ -2,7 +2,7 @@ import string
 from django.conf import settings
 from django.contrib import auth
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import get_hasher, make_password
+from django.contrib.auth.hashers import make_password
 from django.forms import PasswordInput
 from django.utils.text import capfirst
 from era import _, random_str
@@ -120,17 +120,8 @@ class ConfirmationMixin(InvitationMixin):
             {'icon': 'send', 'title': _('request'), 'level': 'success'},
             {'icon': 'chevron-left', 'title': _('back'), 'level': 'link', 'link': self.back_url}]
 
-    def gen_code(self, salt=None):
-        hasher = get_hasher()
-        generate = True
-        while generate:
-            code = random_str()
-            encoded = hasher.encode(code, salt or hasher.salt())
-            generate = bool(Confirm.objects.filter(code=encoded).count())
-        return code, encoded
-
     def create_confirmation(self, user, key, password):
-        code, encoded = self.gen_code(password)
+        code, encoded = Confirm.gen_code(password)
         Confirm.objects.create(
             user=user,
             key=key,
