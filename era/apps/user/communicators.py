@@ -9,7 +9,7 @@ class Communicator:
     def __init__(self, user):
         self.user = user
 
-    def communicate(self, text):
+    def communicate(self, subj, text):
         raise NotImplementedError
 
     def send(self, request, subject, component, **props):

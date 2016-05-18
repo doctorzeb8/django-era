@@ -68,8 +68,7 @@ class Notification(Component):
         return ': '.join([capfirst(str(label)), value or self.props.get(label.string)])
 
     def render_logo(self):
-        if self.props.user.comm.display_html:
-            return self.inject(Logo)
+        return self.inject(Logo)
 
     def render_link(self, **kw):
         if self.props.user.comm.display_html:
@@ -84,7 +83,9 @@ class Notification(Component):
 
 class AuthNotification(Notification):
     def get_parts(self):
-        result = ['logo', 'empty']
+        result = []
+        if self.props.user.comm.display_html:
+            result = ['logo', 'empty']
         if 'code' in self.props:
             result.append('code')
         if 'password' in self.props:

@@ -63,7 +63,7 @@ class PasswordMixin:
         return super().process_valid(form=form, **kw)
 
     def save_form(self, form):
-        if not self.instance or 'password' in form.changed_data:
+        if not self.instance or form.cleaned_data['password']:
             form.instance.set_password(form.cleaned_data['password'])
         super().save_form(form)
 
@@ -98,8 +98,9 @@ class InvitationMixin(UserMixin, PasswordMixin):
     def send_notification(self, form, **kw):
         if not 'password' in form.changed_data:
             kw['password'] = form.cleaned_data['password']
-        self.get_user(form).comm.send(
-            self.request, self.notification_message, self.notification, **kw)
+        if kw:
+            self.get_user(form).comm.send(
+                self.request, self.notification_message, self.notification, **kw)
 
     def save_form(self, form):
         new_user = not bool(form.instance.pk)
@@ -116,7 +117,7 @@ class ConfirmationMixin(InvitationMixin):
     success_message = _('confirmation data has been sent')
 
     def get_actions(self):
-        return super().get_actions() or [
+        return super().get_actions() if not self.back_url else [
             {'icon': 'send', 'title': _('request'), 'level': 'success'},
             {'icon': 'chevron-left', 'title': _('back'), 'level': 'link', 'link': self.back_url}]
 

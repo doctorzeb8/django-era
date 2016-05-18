@@ -8,7 +8,7 @@ from django.contrib.auth.hashers import get_hasher
 from django.utils.text import capfirst
 
 from era import _
-from era.views import RedirectView, FormView, CollectionView, ObjectView
+from era.views import BaseView, FormView, CollectionView, ObjectView
 from era.utils.functools import pick
 
 from .components import ResetNotification
@@ -199,7 +199,7 @@ class ProfileView(UserMixin, PasswordMixin, LoginMixin, FormView):
         return form
 
     def process_valid(self, form, **kw):
-        if 'password' in form.changed_data:
+        if form.cleaned_data['password']:
             self.save_form(form)
             return self.process_login(auth.authenticate(**dict(
                 self.request.user.username_dict,
@@ -210,11 +210,11 @@ class ProfileView(UserMixin, PasswordMixin, LoginMixin, FormView):
         return _('your profile was updated successfully')
 
 
-class LogoutView(RedirectView):
+class LogoutView(BaseView):
     decorators = [login_required]
-    permanent = True
 
-    def get_redirect_url(self):
+    def get(self, *args, **kw):
         auth.logout(self.request)
-        self.pattern_name = 'index'
-        return super().get_redirect_url()
+        response = self.navigate('login')
+        response.status_code = 307
+        return response
