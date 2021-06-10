@@ -15,7 +15,7 @@ setup(
     include_package_data = True,
 
     install_requires=[
-        'Django==1.8.2',
+        'Django==2.2.24',
         'django-bower==5.0.4',
         'django-classy-tags==0.6.1'],
     extras_require={
